@@ -17,508 +17,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<style>
-/* VARIABLE DEFINITION - DARK MODE (DEFAULT) */
-:root {
-  --primary: #10B981;
-  --primary-dark: #059669;
-  --primary-light: rgba(16, 185, 129, 0.15);
-  --accent: #F59E0B;
-  --bg-outer: #060B14;
-  --bg-app: #0F172A;
-  --surface: #1E293B;
-  --surface-subtle: #334155;
-  --text-main: #F8FAFC;
-  --text-muted: #94A3B8;
-  --border-light: #334155;
-  --danger: #EF4444;
-  --header-bg-start: #0F172A;
-  --header-bg-end: #1E293B;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 10px 30px -4px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-  --radius-xl: 24px;
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --th-bg: #0F172A;
-  --input-bg: #0F172A;
-  --glow-color: rgba(16, 185, 129, 0.25);
-  --bottom-nav-bg: #1E293B;
-}
-
-/* LIGHT MODE OVERRIDES */
-[data-theme="light"] {
-  --primary: #10B981;
-  --primary-dark: #059669;
-  --primary-light: #ECFDF5;
-  --accent: #D97706;
-  --bg-outer: #E2E8F0;
-  --bg-app: #F8FAFC;
-  --surface: #FFFFFF;
-  --surface-subtle: #F1F5F9;
-  --text-main: #0F172A;
-  --text-muted: #64748B;
-  --border-light: #E2E8F0;
-  --danger: #EF4444;
-  --header-bg-start: #1E293B;
-  --header-bg-end: #0F172A;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.12);
-  --th-bg: #F1F5F9;
-  --input-bg: #F8FAFC;
-  --glow-color: rgba(16, 185, 129, 0.15);
-  --bottom-nav-bg: #FFFFFF;
-}
-
-* { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
-html, body { width: 100%; min-height: 100vh; background-color: var(--bg-outer); margin: 0; padding: 0; }
-body { color: var(--text-main); display: flex; justify-content: center; align-items: flex-start; }
-button, input, select, textarea { font: inherit; outline: none; }
-button { border: 0; cursor: pointer; }
-
-.app { width: 100%; max-width: 500px; min-height: 100vh; position: relative; background: var(--bg-app); overflow-x: hidden; padding-bottom: 70px; }
-#mainApp { padding-bottom: 20px; min-height: 100vh; }
-#appLoadingScreen { position: fixed; inset: 0; background: var(--bg-app); color: var(--text-main); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; }
-
-.spinner { width: 40px; height: 40px; border: 4px solid var(--surface-subtle); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* MENU BURGER & DROPDOWN */
-.burger-menu-wrapper { position: relative; }
-.btn-burger {
-  background: var(--surface-subtle);
-  color: var(--text-main);
-  border: 1px solid var(--border-light);
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-}
-.burger-dropdown {
-  display: none;
-  position: absolute;
-  top: 46px;
-  right: 0;
-  background: var(--surface);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  min-width: 190px;
-  z-index: 100;
-  overflow: hidden;
-  padding: 6px;
-}
-.burger-dropdown.show { display: block; animation: fadeIn 0.2s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-
-.burger-item {
-  width: 100%;
-  padding: 10px 12px;
-  text-align: left;
-  background: transparent;
-  color: var(--text-main);
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-radius: var(--radius-md);
-}
-.burger-item:hover { background: var(--surface-subtle); }
-.burger-item.danger { color: var(--danger); }
-.burger-item.danger:hover { background: rgba(239, 68, 68, 0.15); }
-
-/* THEME TOGGLE BUTTON */
-.theme-toggle-btn {
-  background: var(--surface-subtle);
-  border: 1px solid var(--border-light);
-  color: var(--text-main);
-  border-radius: 20px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  box-shadow: var(--shadow-sm);
-  white-space: nowrap;
-}
-
-/* LOGIN SCREEN */
-.login-screen { 
-  display: flex; 
-  flex-direction: column; 
-  justify-content: center; 
-  min-height: 100vh; 
-  padding: calc(24px + env(safe-area-inset-top)) 20px 24px 20px; 
-  background: radial-gradient(circle at top, var(--surface), var(--bg-app)); 
-  color: var(--text-main); 
-  position: relative;
-}
-.login-header { text-align: center; margin-bottom: 24px; }
-.login-header .logo-badge { display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 24px; font-size: 36px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 10px 25px var(--glow-color); animation: float 3s ease-in-out infinite; }
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-.header-img { width: 100%; height: 100%; object-fit: cover; }
-.brand-img { width: 28px; height: 28px; object-fit: cover; border-radius: 8px; vertical-align: middle; flex-shrink: 0; }
-.login-header h1 { font-size: 22px; font-weight: 800; margin: 0; color: var(--text-main); }
-.login-header h1 span { color: var(--primary); }
-.tagline { margin: 6px 0 0; color: var(--text-muted); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-.login-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px 20px; color: var(--text-main); box-shadow: var(--shadow-lg); margin-top: 12px; border: 1px solid var(--border-light); backdrop-filter: blur(10px); }
-
-/* HEADER & NAVBAR */
-.header-bg { 
-  background: linear-gradient(135deg, var(--header-bg-start), var(--header-bg-end)); 
-  padding: calc(16px + env(safe-area-inset-top)) 16px 36px 16px; 
-  border-radius: 0 0 28px 28px; 
-  color: #fff; 
-  border-bottom: 1px solid var(--border-light); 
-  box-shadow: var(--shadow-md); 
-}
-.top-bar { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
-  gap: 10px;
-  margin-bottom: 16px; 
-  flex-wrap: nowrap;
-}
-.brand { 
-  font-size: 16px; 
-  font-weight: 800; 
-  display: flex; 
-  align-items: center; 
-  gap: 6px; 
-  color: #fff; 
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.brand span { color: var(--primary); }
-.header-actions {
-  display: flex; 
-  align-items: center; 
-  gap: 8px; 
-  flex-shrink: 0;
-}
-.avatar { width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 14px; box-shadow: 0 4px 15px var(--glow-color); flex-shrink: 0; }
-
-.content { padding: 0 16px; margin-top: -20px; }
-.card { background: var(--surface); border-radius: var(--radius-xl); padding: 18px 16px; box-shadow: var(--shadow-md); margin-bottom: 16px; border: 1px solid var(--border-light); }
-
-.clock-card {
-  background: linear-gradient(135deg, var(--surface), var(--surface-subtle));
-  position: relative;
-  overflow: hidden;
-}
-.clock-card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 100px;
-  height: 100px;
-  background: var(--primary);
-  opacity: 0.1;
-  border-radius: 50%;
-  filter: blur(30px);
-}
-.clock-display { font-size: 30px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; }
-
-/* BUTTONS */
-.btn-go { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; font-weight: 700; border-radius: var(--radius-lg); padding: 14px 20px; width: 100%; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 6px 20px var(--glow-color); transition: all 0.2s ease; }
-.btn-go:disabled { background: var(--surface-subtle); color: var(--text-muted); cursor: not-allowed; box-shadow: none; opacity: 0.7; }
-.btn-go:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 25px var(--glow-color); }
-.btn-go:active:not(:disabled) { transform: scale(0.98); }
-.btn-secondary { background: var(--surface-subtle); color: var(--text-main); font-weight: 700; border-radius: var(--radius-lg); padding: 12px 18px; width: 100%; font-size: 14px; border: 1px solid var(--border-light); }
-.btn-secondary:hover { background: var(--border-light); }
-.btn-danger { background: var(--danger); color: #fff; font-weight: 700; padding: 6px 12px; border-radius: var(--radius-md); font-size: 11px; }
-.btn-danger:hover { background: #DC2626; }
-.btn-warning { background: var(--accent); color: #fff; font-weight: 700; padding: 6px 12px; border-radius: var(--radius-md); font-size: 11px; }
-.btn-export { background: #0284C7; color: #fff; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-md); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
-.btn-export-pdf { background: #DC2626; color: #fff; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-md); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
-.btn-sm { font-size: 11px; padding: 6px 10px; border-radius: 8px; }
-
-.export-container { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-
-.grid-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.stat-box { background: var(--surface); border-radius: var(--radius-lg); padding: 12px 8px; text-align: center; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); }
-.stat-box b { font-size: 18px; font-weight: 800; display: block; color: var(--text-main); }
-.stat-box small { font-size: 10px; color: var(--text-muted); font-weight: 600; }
-
-.input-group { margin-bottom: 14px; }
-.input-group label { font-size: 12px; font-weight: 700; display: block; margin-bottom: 6px; color: var(--text-muted); }
-.input-group input, .input-group select, .input-group textarea { width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-light); background: var(--input-bg); color: var(--text-main); font-size: 13px; }
-
-/* BOTTOM TAB NAVIGATION FOR ADMIN */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 500px;
-  background: var(--bottom-nav-bg);
-  border-top: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 8px 4px calc(8px + env(safe-area-inset-bottom)) 4px;
-  z-index: 150;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-}
-.bottom-nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 6px 0;
-  border: none;
-  gap: 3px;
-}
-.bottom-nav-item .icon { font-size: 18px; }
-.bottom-nav-item.active { color: var(--primary); }
-/* Admin memakai bottom navigation sebagai satu-satunya navigasi */
-.admin-tabs { display:none !important; }
-#adminArea { padding-bottom: 90px; }
-@media (max-width:520px){ .bottom-nav{overflow-x:auto;justify-content:flex-start;gap:2px}.bottom-nav-item{min-width:64px;flex:0 0 64px;font-size:9px}.bottom-nav-item .icon{font-size:17px} }
-
-/* ===== RESPONSIVE HYBRID: MOBILE -> TABLET -> DESKTOP ===== */
-.desktop-sidebar { display:none; }
-.sidebar-brand,.sidebar-user,.sidebar-nav-item,.sidebar-footer-btn { color:var(--text-main); }
-.sidebar-brand { display:flex; align-items:center; gap:10px; padding:4px 4px 22px; border-bottom:1px solid var(--border-light); }
-.sidebar-logo { width:42px; height:42px; border-radius:12px; object-fit:cover; flex-shrink:0; }
-.sidebar-brand b { display:block; font-size:15px; font-weight:800; letter-spacing:.2px; }
-.sidebar-brand span { color:var(--primary); font-size:11px; font-weight:800; margin-left:4px; }
-.sidebar-brand small { display:block; color:var(--text-muted); font-size:9px; font-weight:700; margin-top:2px; }
-.sidebar-user { display:flex; align-items:center; gap:10px; padding:18px 4px 14px; }
-.sidebar-user b { display:block; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:145px; }
-.sidebar-user small { display:block; color:var(--text-muted); font-size:9px; margin-top:3px; }
-.sidebar-nav { display:flex; flex-direction:column; gap:5px; }
-.sidebar-nav-item { width:100%; border:1px solid transparent; background:transparent; border-radius:12px; padding:11px 12px; display:flex; align-items:center; gap:11px; text-align:left; font-size:12px; font-weight:700; }
-.sidebar-nav-item span:first-child { width:22px; text-align:center; font-size:17px; }
-.sidebar-nav-item:hover { background:var(--surface-subtle); }
-.sidebar-nav-item.active { background:var(--primary-light); color:var(--primary); border-color:rgba(16,185,129,.15); }
-.sidebar-footer { margin-top:auto; padding-top:14px; border-top:1px solid var(--border-light); display:grid; gap:6px; }
-.sidebar-footer-btn { width:100%; background:transparent; border-radius:11px; padding:10px 12px; display:flex; align-items:center; gap:10px; text-align:left; font-size:11px; font-weight:700; }
-.sidebar-footer-btn:hover { background:var(--surface-subtle); }
-.sidebar-footer-btn.danger { color:var(--danger); }
-
-@media (min-width:700px) and (max-width:1199px) {
-  .content { padding-left:22px; padding-right:22px; }
-  .grid-stats { grid-template-columns:repeat(4,1fr); }
-}
-
-@media (min-width:900px) {
-  html, body { min-height:100%; }
-  body { display:block; }
-  .app { max-width:none; width:100%; min-height:100vh; padding-bottom:0; overflow-x:visible; }
-  #mainApp { min-height:100vh; padding-bottom:0; }
-  #mainApp.is-admin { padding-left:250px; }
-  #mainApp.is-admin .desktop-sidebar {
-    display:flex; position:fixed; z-index:180; left:0; top:0; bottom:0; width:250px;
-    flex-direction:column; padding:22px 16px; background:var(--surface);
-    border-right:1px solid var(--border-light); box-shadow:4px 0 24px rgba(0,0,0,.08);
-  }
-  #mainApp.is-admin .header-bg { margin-left:0; border-radius:0 0 0 28px; padding:24px 34px 46px; }
-  #mainApp.is-admin .content { padding:0 34px; margin-top:-26px; }
-  #mainApp.is-admin .content > #adminArea { max-width:1600px; margin:0 auto; }
-  #mainApp.is-admin #employeeArea { max-width:1200px; margin:0 auto; }
-  #mainApp.is-admin .card { padding:20px; }
-  #mainApp.is-admin #adminArea > .card { margin-bottom:20px; }
-  #mainApp.is-admin .mini-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-  #mainApp.is-admin .dashboard-grid,
-  #mainApp.is-admin .admin-dashboard-grid { grid-template-columns:minmax(0,1.4fr) minmax(320px,1fr); gap:20px; }
-  #mainApp.is-admin .bottom-nav { display:none !important; }
-  #mainApp.is-admin .btn-burger { display:none; }
-  #adminArea { padding-bottom:0 !important; }
-  .wide-table { min-width:100%; }
-  .table-responsive { max-width:100%; }
-}
-
-@media (min-width:1400px) {
-  #mainApp.is-admin .header-bg { padding-left:44px; padding-right:44px; }
-  #mainApp.is-admin .content { padding-left:44px; padding-right:44px; }
-}
-
-.badge { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 20px; background: rgba(16, 185, 129, 0.2); color: #10B981; display: inline-block; border: 1px solid rgba(16, 185, 129, 0.3); }
-.badge.pending { background: rgba(245, 158, 11, 0.2); color: #F59E0B; border-color: rgba(245, 158, 11, 0.3); }
-.badge.danger { background: rgba(239, 68, 68, 0.2); color: #EF4444; border-color: rgba(239, 68, 68, 0.3); }
-.badge.success { background: rgba(16, 185, 129, 0.2); color: #10B981; border-color: rgba(16, 185, 129, 0.3); }
-
-.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: none; align-items: flex-end; justify-content: center; z-index: 200; backdrop-filter: blur(8px); }
-.modal.show { display: flex; }
-.sheet { width: min(480px, 100%); max-height: 90dvh; overflow-y: auto; background: var(--surface); color: var(--text-main); border-radius: 28px 28px 0 0; padding: 20px; box-shadow: var(--shadow-lg); border-top: 1px solid var(--border-light); }
-
-.table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-light); -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; white-space: nowrap; }
-th, td { padding: 10px 8px; border-bottom: 1px solid var(--border-light); vertical-align: middle; color: var(--text-main); }
-th { font-weight: 700; color: var(--text-muted); font-size: 10px; text-transform: uppercase; background: var(--th-bg); }
-tr:last-child td { border-bottom: 0; }
-tbody tr:hover { background: var(--surface-subtle); }
-
-#map { width: 100%; height: 200px; border-radius: var(--radius-md); margin-top: 10px; z-index: 1; border: 1px solid var(--border-light); }
-#cameraPreview, #cameraFallbackPreview, #capturedPhoto { width: 100%; height: 220px; object-fit: cover; border-radius: var(--radius-md); background: #000; margin-bottom: 10px; border: 1px solid var(--border-light); }
-#cameraPreview { display:block; }
-
-.action-btns { display: flex; gap: 4px; }
-.alert-box { padding: 10px 12px; border-radius: var(--radius-md); font-size: 12px; font-weight: 600; margin-bottom: 12px; display: none; }
-.alert-danger { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-
-.img-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-light); }
-
-.admin-form-card {
-  background: var(--input-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-  margin-bottom: 16px;
-}
-
-@media screen and (min-width: 768px) {
-  body { padding: 30px; background: var(--bg-outer); }
-  .app { max-width: 850px; border-radius: 24px; min-height: auto; border: 1px solid var(--border-light); box-shadow: var(--shadow-lg); }
-  .bottom-nav { max-width: 850px; border-radius: 0 0 24px 24px; }
-  .modal { align-items: center; }
-  .sheet { border-radius: 24px; }
-}
-
-/* ===== ACADEMY UPGRADE ===== */
-.search-row{display:flex;gap:8px;margin:10px 0}.search-row input{flex:1}.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{background:var(--surface-subtle);border:1px solid var(--border-light);border-radius:14px;padding:13px}.metric b{font-size:22px;display:block}.metric small{color:var(--text-muted)}.progress{height:8px;background:var(--surface-subtle);border-radius:99px;overflow:hidden;margin-top:8px}.progress>span{display:block;height:100%;background:var(--primary);border-radius:99px}.schedule-item,.notice-item,.note-item{padding:12px;border:1px solid var(--border-light);border-radius:14px;margin-bottom:8px;background:var(--surface-subtle)}.schedule-item b,.notice-item b,.note-item b{display:block;margin-bottom:4px}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:var(--primary-light);color:var(--primary);font-size:10px;font-weight:800}.rank-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-light)}.rank-num{width:28px;height:28px;border-radius:9px;background:var(--surface-subtle);display:grid;place-items:center;font-weight:800}.bar-row{display:grid;grid-template-columns:75px 1fr 35px;gap:8px;align-items:center;font-size:10px;margin:7px 0}.bar{height:10px;background:var(--surface-subtle);border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:var(--primary);border-radius:99px}.badge-gold{background:#FDE68A;color:#92400E}.badge-blue{background:#DBEAFE;color:#1D4ED8}.admin-tabs{display:flex;gap:6px;overflow:auto;padding:2px;margin-bottom:14px}.admin-tabs button{white-space:nowrap;background:var(--surface-subtle);color:var(--text-main);border:1px solid var(--border-light);padding:9px 11px;border-radius:12px;font-size:11px;font-weight:800}.admin-tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}.wide-table{min-width:650px}.empty{padding:18px;text-align:center;color:var(--text-muted);font-size:12px}.profile-head{display:flex;gap:12px;align-items:center}.profile-avatar{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:grid;place-items:center;color:#fff;font-size:20px;font-weight:800}.notice-item{border-left:4px solid var(--primary)}@media(min-width:700px){.mini-grid{grid-template-columns:repeat(4,1fr)}}
-
-/* ===== MINI MAP ABSENSI ===== */
-#attendanceMap{height:220px;width:100%;border-radius:16px;overflow:hidden;border:1px solid var(--border-light);margin:10px 0 8px;z-index:1}
-.att-map-actions{display:flex;gap:8px;margin-bottom:10px}
-.att-map-actions button{flex:1}
-.att-map-caption{font-size:10px;color:var(--text-muted);text-align:center;margin:0 0 10px}
-.leaflet-container{font:11px Plus Jakarta Sans,Arial,sans-serif;background:#e2e8f0}
-.leaflet-control-attribution{font-size:8px}
-</style>
-<style id="zetsu-age-group">#newUserAgeGroup{background:var(--surface-subtle);color:var(--primary);text-align:center}#userAgeGroupFilter{font-weight:700}</style>
-
-<style id="zetsu-desktop-fit">
-/* DESKTOP FIT: gunakan seluruh ruang layar, bukan ukuran mobile */
-@media (min-width: 900px) {
-  html, body { width:100%; min-width:100%; }
-  body { margin:0; padding:0; overflow-x:hidden; }
-  .app { width:100vw !important; max-width:none !important; min-width:0 !important; margin:0 !important; }
-  #mainApp.is-admin { width:100vw !important; max-width:none !important; padding-left:250px !important; }
-  #mainApp.is-admin .header-bg { width:100% !important; margin:0 !important; }
-  #mainApp.is-admin .content { width:100% !important; max-width:none !important; padding:0 28px 28px !important; margin-top:-26px !important; }
-  #mainApp.is-admin .content > #adminArea { width:100% !important; max-width:none !important; margin:0 !important; }
-  #mainApp.is-admin #adminArea > .card { width:100% !important; }
-
-  /* Dashboard admin melebar mengikuti area desktop */
-  #mainApp.is-admin #tabDashboard { width:100%; }
-  #mainApp.is-admin #tabDashboard > .mini-grid {
-    width:100%;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:18px;
-  }
-  #mainApp.is-admin #tabDashboard > .mini-grid .metric {
-    min-height:92px;
-    padding:18px;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-  }
-  #mainApp.is-admin #tabDashboard > .mini-grid .metric b { font-size:28px; }
-  #mainApp.is-admin #tabDashboard > .mini-grid .metric small { font-size:12px; }
-
-  #mainApp.is-admin #tabDashboard > .card {
-    margin-top:18px !important;
-    width:100%;
-    padding:22px !important;
-  }
-  #mainApp.is-admin #tabDashboard > .card:nth-of-type(1),
-  #mainApp.is-admin #tabDashboard > .card:nth-of-type(2) {
-    display:inline-block;
-    vertical-align:top;
-    width:calc(50% - 10px);
-  }
-  #mainApp.is-admin #tabDashboard > .card:nth-of-type(2) { margin-left:16px; }
-  #mainApp.is-admin #attendanceChart { min-height:180px; }
-  #mainApp.is-admin #adminRanking { min-height:180px; }
-
-  /* Semua halaman admin mengikuti lebar desktop */
-  #mainApp.is-admin .admin-form-card,
-  #mainApp.is-admin .table-responsive,
-  #mainApp.is-admin .search-row,
-  #mainApp.is-admin .filter-row,
-  #mainApp.is-admin #scheduleAdminList,
-  #mainApp.is-admin #announcementAdminList,
-  #mainApp.is-admin #notesAdminList,
-  #mainApp.is-admin #pointsAdminList { width:100%; }
-}
-
-@media (min-width: 1200px) {
-  #mainApp.is-admin .content { padding-left:36px !important; padding-right:36px !important; }
-  #mainApp.is-admin #tabDashboard > .mini-grid { gap:22px; }
-  #mainApp.is-admin #tabDashboard > .card:nth-of-type(1),
-  #mainApp.is-admin #tabDashboard > .card:nth-of-type(2) { width:calc(50% - 12px); }
-}
-</style>
-
-
-<style id="zetsu-modern-typography">
-/* ===== MODERN TYPOGRAPHY ===== */
-:root{
-  --font-modern:'Plus Jakarta Sans',Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-}
-html,body,*{font-family:var(--font-modern);}
-body{letter-spacing:-.01em;}
-h1,h2,h3,h4,h5,h6{letter-spacing:-.035em;line-height:1.15;font-weight:800;}
-p{line-height:1.55;}
-label,small,.metric small,.sidebar-brand small,.sidebar-user small{letter-spacing:.005em;}
-button,input,select,textarea{font-family:var(--font-modern);}
-
-/* Header lebih clean dan premium */
-.header-bg h1{font-size:clamp(22px,2.4vw,34px)!important;font-weight:800;letter-spacing:-.045em!important;line-height:1.05!important;}
-.header-bg p{font-size:clamp(12px,1vw,14px);letter-spacing:-.01em;}
-
-/* Statistik */
-.metric b{font-size:clamp(24px,2vw,32px);font-weight:800;letter-spacing:-.045em;line-height:1;}
-.metric small{font-size:11px;font-weight:600;line-height:1.35;}
-
-/* Judul section */
-.card h3,.card h4{letter-spacing:-.035em;font-weight:800;}
-.schedule-item b,.notice-item b,.note-item b{font-weight:750;letter-spacing:-.02em;}
-
-/* Sidebar */
-.sidebar-brand b{font-size:15px;font-weight:800;letter-spacing:-.025em;}
-.sidebar-brand span{font-weight:800;letter-spacing:.01em;}
-.sidebar-user b{font-size:12px;font-weight:750;letter-spacing:-.015em;}
-.sidebar-nav-item{font-size:11.5px;font-weight:700;letter-spacing:-.01em;}
-.sidebar-footer-btn{font-size:11px;font-weight:700;letter-spacing:-.005em;}
-
-/* Tombol dan tab */
-button{letter-spacing:-.01em;}
-.admin-tabs button{font-size:11px;font-weight:750;letter-spacing:-.01em;}
-.pill,.badge{font-weight:750;letter-spacing:.01em;}
-
-/* Desktop: typography ikut membesar agar tidak terasa seperti UI HP */
-@media(min-width:900px){
-  #mainApp.is-admin .content{font-size:13px;}
-  #mainApp.is-admin .card{border-radius:20px;}
-  #mainApp.is-admin .card h3,#mainApp.is-admin .card h4{font-size:17px;}
-  #mainApp.is-admin .metric small{font-size:12px;}
-  #mainApp.is-admin .sidebar-nav-item{font-size:12px;padding:12px 13px;}
-}
-</style>
+<style>:root{--primary:#10B981;--primary-dark:#059669;--primary-light:rgba(16,185,129,0.15);--accent:#F59E0B;--bg-outer:#060B14;--bg-app:#0F172A;--surface:#1E293B;--surface-subtle:#334155;--text-main:#F8FAFC;--text-muted:#94A3B8;--border-light:#334155;--danger:#EF4444;--header-bg-start:#0F172A;--header-bg-end:#1E293B;--shadow-sm:0 2px 8px rgba(0,0,0,0.2);--shadow-md:0 10px 30px -4px rgba(0,0,0,0.4);--shadow-lg:0 20px 25px -5px rgba(0,0,0,0.5);--radius-xl:24px;--radius-lg:16px;--radius-md:12px;--th-bg:#0F172A;--input-bg:#0F172A;--glow-color:rgba(16,185,129,0.25);--bottom-nav-bg:#1E293B;--font-modern:'Plus Jakarta Sans',Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}[data-theme="light"]{--primary:#10B981;--primary-dark:#059669;--primary-light:#ECFDF5;--accent:#D97706;--bg-outer:#E2E8F0;--bg-app:#F8FAFC;--surface:#FFFFFF;--surface-subtle:#F1F5F9;--text-main:#0F172A;--text-muted:#64748B;--border-light:#E2E8F0;--danger:#EF4444;--header-bg-start:#1E293B;--header-bg-end:#0F172A;--shadow-sm:0 2px 8px rgba(0,0,0,0.05);--shadow-md:0 10px 25px -5px rgba(0,0,0,0.08);--shadow-lg:0 20px 25px -5px rgba(0,0,0,0.12);--th-bg:#F1F5F9;--input-bg:#F8FAFC;--glow-color:rgba(16,185,129,0.15);--bottom-nav-bg:#FFFFFF}*{box-sizing:border-box;font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased;transition:background-color 0.3s ease,color 0.3s ease,border-color 0.3s ease,box-shadow 0.3s ease}html,body{width:100%;min-height:100vh;background-color:var(--bg-outer);margin:0;padding:0;letter-spacing:-.01em}body{color:var(--text-main);display:flex;justify-content:center;align-items:flex-start}button,input,select,textarea{font:inherit;outline:none}button{border:0;cursor:pointer;letter-spacing:-.01em}.app{width:100%;max-width:500px;min-height:100vh;position:relative;background:var(--bg-app);overflow-x:hidden;padding-bottom:70px}#mainApp{padding-bottom:20px;min-height:100vh}#appLoadingScreen{position:fixed;inset:0;background:var(--bg-app);color:var(--text-main);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}.spinner{width:40px;height:40px;border:4px solid var(--surface-subtle);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:16px}@keyframes spin{to{transform:rotate(360deg)}}.burger-menu-wrapper{position:relative}.btn-burger{background:var(--surface-subtle);color:var(--text-main);border:1px solid var(--border-light);width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:var(--shadow-sm);cursor:pointer}.burger-dropdown{display:none;position:absolute;top:46px;right:0;background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);min-width:190px;z-index:100;overflow:hidden;padding:6px}.burger-dropdown.show{display:block;animation:fadeIn 0.2s ease-out}@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}.burger-item{width:100%;padding:10px 12px;text-align:left;background:transparent;color:var(--text-main);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;border-radius:var(--radius-md)}.burger-item:hover{background:var(--surface-subtle)}.burger-item.danger{color:var(--danger)}.burger-item.danger:hover{background:rgba(239,68,68,0.15)}.theme-toggle-btn{background:var(--surface-subtle);border:1px solid var(--border-light);color:var(--text-main);border-radius:20px;padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;box-shadow:var(--shadow-sm);white-space:nowrap}.login-screen{display:flex;flex-direction:column;justify-content:center;min-height:100vh;padding:calc(24px + env(safe-area-inset-top)) 20px 24px 20px;background:radial-gradient(circle at top,var(--surface),var(--bg-app));color:var(--text-main);position:relative}.login-header{text-align:center;margin-bottom:24px}.login-header .logo-badge{display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:24px;font-size:36px;margin-bottom:12px;overflow:hidden;box-shadow:0 10px 25px var(--glow-color);animation:float 3s ease-in-out infinite}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.header-img{width:100%;height:100%;object-fit:cover}.brand-img{width:28px;height:28px;object-fit:cover;border-radius:8px;vertical-align:middle;flex-shrink:0}.login-header h1{font-size:22px;font-weight:800;margin:0;color:var(--text-main)}.login-header h1 span{color:var(--primary)}.tagline{margin:6px 0 0;color:var(--text-muted);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase}.login-card{background:var(--surface);border-radius:var(--radius-xl);padding:24px 20px;color:var(--text-main);box-shadow:var(--shadow-lg);margin-top:12px;border:1px solid var(--border-light);backdrop-filter:blur(10px)}.header-bg{background:linear-gradient(135deg,var(--header-bg-start),var(--header-bg-end));padding:calc(16px + env(safe-area-inset-top)) 16px 36px 16px;border-radius:0 0 28px 28px;color:#fff;border-bottom:1px solid var(--border-light);box-shadow:var(--shadow-md)}.top-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:nowrap}.brand{font-size:16px;font-weight:800;display:flex;align-items:center;gap:6px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand span{color:var(--primary)}.header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}.avatar{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:800;display:grid;place-items:center;font-size:14px;box-shadow:0 4px 15px var(--glow-color);flex-shrink:0}.content{padding:0 16px;margin-top:-20px}.card{background:var(--surface);border-radius:var(--radius-xl);padding:18px 16px;box-shadow:var(--shadow-md);margin-bottom:16px;border:1px solid var(--border-light)}.clock-card{background:linear-gradient(135deg,var(--surface),var(--surface-subtle));position:relative;overflow:hidden}.clock-card::before{content:'';position:absolute;top:-50%;right:-50%;width:100px;height:100px;background:var(--primary);opacity:0.1;border-radius:50%;filter:blur(30px)}.clock-display{font-size:30px;font-weight:800;color:var(--text-main);letter-spacing:-1px}.btn-go{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-weight:700;border-radius:var(--radius-lg);padding:14px 20px;width:100%;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px var(--glow-color);transition:all 0.2s ease}.btn-go:disabled{background:var(--surface-subtle);color:var(--text-muted);cursor:not-allowed;box-shadow:none;opacity:0.7}.btn-go:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-2px);box-shadow:0 8px 25px var(--glow-color)}.btn-go:active:not(:disabled){transform:scale(0.98)}.btn-secondary{background:var(--surface-subtle);color:var(--text-main);font-weight:700;border-radius:var(--radius-lg);padding:12px 18px;width:100%;font-size:14px;border:1px solid var(--border-light)}.btn-secondary:hover{background:var(--border-light)}.btn-danger{background:var(--danger);color:#fff;font-weight:700;padding:6px 12px;border-radius:var(--radius-md);font-size:11px}.btn-danger:hover{background:#DC2626}.btn-warning{background:var(--accent);color:#fff;font-weight:700;padding:6px 12px;border-radius:var(--radius-md);font-size:11px}.btn-export{background:#0284C7;color:#fff;font-weight:700;padding:8px 12px;border-radius:var(--radius-md);font-size:12px;display:inline-flex;align-items:center;gap:4px}.btn-export-pdf{background:#DC2626;color:#fff;font-weight:700;padding:8px 12px;border-radius:var(--radius-md);font-size:12px;display:inline-flex;align-items:center;gap:4px}.btn-sm{font-size:11px;padding:6px 10px;border-radius:8px}.export-container{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.grid-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}.stat-box{background:var(--surface);border-radius:var(--radius-lg);padding:12px 8px;text-align:center;border:1px solid var(--border-light);box-shadow:var(--shadow-sm)}.stat-box b{font-size:18px;font-weight:800;display:block;color:var(--text-main)}.stat-box small{font-size:10px;color:var(--text-muted);font-weight:600}.input-group{margin-bottom:14px}.input-group label{font-size:12px;font-weight:700;display:block;margin-bottom:6px;color:var(--text-muted)}.input-group input,.input-group select,.input-group textarea{width:100%;padding:12px;border-radius:var(--radius-md);border:1px solid var(--border-light);background:var(--input-bg);color:var(--text-main);font-size:13px}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;background:var(--bottom-nav-bg);border-top:1px solid var(--border-light);display:flex;justify-content:space-around;align-items:center;padding:8px 4px calc(8px + env(safe-area-inset-bottom)) 4px;z-index:150;box-shadow:0 -4px 20px rgba(0,0,0,0.15)}.bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:transparent;color:var(--text-muted);font-size:10px;font-weight:700;padding:6px 0;border:none;gap:3px}.bottom-nav-item .icon{font-size:18px}.bottom-nav-item.active{color:var(--primary)}#adminArea{padding-bottom:90px}@media (max-width:520px){.bottom-nav{overflow-x:auto;justify-content:flex-start;gap:2px}.bottom-nav-item{min-width:64px;flex:0 0 64px;font-size:9px}.bottom-nav-item .icon{font-size:17px}}.desktop-sidebar{display:none}.sidebar-brand,.sidebar-user,.sidebar-nav-item,.sidebar-footer-btn{color:var(--text-main)}.sidebar-brand{display:flex;align-items:center;gap:10px;padding:4px 4px 22px;border-bottom:1px solid var(--border-light)}.sidebar-logo{width:42px;height:42px;border-radius:12px;object-fit:cover;flex-shrink:0}.sidebar-brand b{display:block;font-size:15px;font-weight:800;letter-spacing:.2px}.sidebar-brand span{color:var(--primary);font-size:11px;font-weight:800;margin-left:4px}.sidebar-brand small{display:block;color:var(--text-muted);font-size:9px;font-weight:700;margin-top:2px}.sidebar-user{display:flex;align-items:center;gap:10px;padding:18px 4px 14px}.sidebar-user b{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px}.sidebar-user small{display:block;color:var(--text-muted);font-size:9px;margin-top:3px}.sidebar-nav{display:flex;flex-direction:column;gap:5px}.sidebar-nav-item{width:100%;border:1px solid transparent;background:transparent;border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:11px;text-align:left;font-size:12px;font-weight:700}.sidebar-nav-item span:first-child{width:22px;text-align:center;font-size:17px}.sidebar-nav-item:hover{background:var(--surface-subtle)}.sidebar-nav-item.active{background:var(--primary-light);color:var(--primary);border-color:rgba(16,185,129,.15)}.sidebar-footer{margin-top:auto;padding-top:14px;border-top:1px solid var(--border-light);display:grid;gap:6px}.sidebar-footer-btn{width:100%;background:transparent;border-radius:11px;padding:10px 12px;display:flex;align-items:center;gap:10px;text-align:left;font-size:11px;font-weight:700}.sidebar-footer-btn:hover{background:var(--surface-subtle)}.sidebar-footer-btn.danger{color:var(--danger)}@media (min-width:700px) and (max-width:1199px){.content{padding-left:22px;padding-right:22px}.grid-stats{grid-template-columns:repeat(4,1fr)}}@media (min-width:900px){html,body{min-height:100%}body{display:block}.app{max-width:none;width:100%;min-height:100vh;padding-bottom:0;overflow-x:visible}#mainApp{min-height:100vh;padding-bottom:0}#mainApp.is-admin{padding-left:250px}#mainApp.is-admin .desktop-sidebar{display:flex;position:fixed;z-index:180;left:0;top:0;bottom:0;width:250px;flex-direction:column;padding:22px 16px;background:var(--surface);border-right:1px solid var(--border-light);box-shadow:4px 0 24px rgba(0,0,0,.08)}#mainApp.is-admin .header-bg{margin-left:0;border-radius:0 0 0 28px;padding:24px 34px 46px}#mainApp.is-admin .content{padding:0 34px;margin-top:-26px}#mainApp.is-admin .content > #adminArea{max-width:1600px;margin:0 auto}#mainApp.is-admin #employeeArea{max-width:1200px;margin:0 auto}#mainApp.is-admin .card{padding:20px}#mainApp.is-admin #adminArea > .card{margin-bottom:20px}#mainApp.is-admin .mini-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}#mainApp.is-admin .dashboard-grid,#mainApp.is-admin .admin-dashboard-grid{grid-template-columns:minmax(0,1.4fr) minmax(320px,1fr);gap:20px}#mainApp.is-admin .bottom-nav{display:none !important}#mainApp.is-admin .btn-burger{display:none}#adminArea{padding-bottom:0 !important}.wide-table{min-width:100%}.table-responsive{max-width:100%}}@media (min-width:1400px){#mainApp.is-admin .header-bg{padding-left:44px;padding-right:44px}#mainApp.is-admin .content{padding-left:44px;padding-right:44px}}.badge{font-size:10px;font-weight:750;padding:4px 8px;border-radius:20px;background:rgba(16,185,129,0.2);color:#10B981;display:inline-block;border:1px solid rgba(16,185,129,0.3)}.badge.pending{background:rgba(245,158,11,0.2);color:#F59E0B;border-color:rgba(245,158,11,0.3)}.badge.danger{background:rgba(239,68,68,0.2);color:#EF4444;border-color:rgba(239,68,68,0.3)}.badge.success{background:rgba(16,185,129,0.2);color:#10B981;border-color:rgba(16,185,129,0.3)}.modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:200;backdrop-filter:blur(8px)}.modal.show{display:flex}.sheet{width:min(480px,100%);max-height:90dvh;overflow-y:auto;background:var(--surface);color:var(--text-main);border-radius:28px 28px 0 0;padding:20px;box-shadow:var(--shadow-lg);border-top:1px solid var(--border-light)}.table-responsive{width:100%;overflow-x:auto;margin-top:10px;border-radius:var(--radius-md);border:1px solid var(--border-light);-webkit-overflow-scrolling:touch}table{width:100%;border-collapse:collapse;text-align:left;font-size:12px;white-space:nowrap}th,td{padding:10px 8px;border-bottom:1px solid var(--border-light);vertical-align:middle;color:var(--text-main)}th{font-weight:700;color:var(--text-muted);font-size:10px;text-transform:uppercase;background:var(--th-bg)}tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--surface-subtle)}#cameraPreview,#cameraFallbackPreview,#capturedPhoto{width:100%;height:220px;object-fit:cover;border-radius:var(--radius-md);background:#000;margin-bottom:10px;border:1px solid var(--border-light)}#cameraPreview{display:block}.action-btns{display:flex;gap:4px}.alert-box{padding:10px 12px;border-radius:var(--radius-md);font-size:12px;font-weight:600;margin-bottom:12px;display:none}.alert-danger{background:rgba(239,68,68,0.15);color:#EF4444;border:1px solid rgba(239,68,68,0.3)}.img-thumb{width:36px;height:36px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border-light)}.admin-form-card{background:var(--input-bg);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;margin-bottom:16px}@media screen and (min-width:768px){body{padding:30px;background:var(--bg-outer)}.app{max-width:850px;border-radius:24px;min-height:auto;border:1px solid var(--border-light);box-shadow:var(--shadow-lg)}.bottom-nav{max-width:850px;border-radius:0 0 24px 24px}.modal{align-items:center}.sheet{border-radius:24px}}.search-row{display:flex;gap:8px;margin:10px 0}.search-row input{flex:1}.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{background:var(--surface-subtle);border:1px solid var(--border-light);border-radius:14px;padding:13px}.metric b{font-size:22px;display:block}.metric small{color:var(--text-muted);font-size:11px;font-weight:600;line-height:1.35;letter-spacing:.005em}.progress{height:8px;background:var(--surface-subtle);border-radius:99px;overflow:hidden;margin-top:8px}.progress>span{display:block;height:100%;background:var(--primary);border-radius:99px}.schedule-item,.notice-item,.note-item{padding:12px;border:1px solid var(--border-light);border-radius:14px;margin-bottom:8px;background:var(--surface-subtle)}.schedule-item b,.notice-item b,.note-item b{display:block;margin-bottom:4px}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:var(--primary-light);color:var(--primary);font-size:10px;font-weight:800}.rank-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-light)}.rank-num{width:28px;height:28px;border-radius:9px;background:var(--surface-subtle);display:grid;place-items:center;font-weight:800}.bar-row{display:grid;grid-template-columns:75px 1fr 35px;gap:8px;align-items:center;font-size:10px;margin:7px 0}.bar{height:10px;background:var(--surface-subtle);border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:var(--primary);border-radius:99px}.badge-gold{background:#FDE68A;color:#92400E}.badge-blue{background:#DBEAFE;color:#1D4ED8}.wide-table{min-width:650px}.empty{padding:18px;text-align:center;color:var(--text-muted);font-size:12px}.profile-head{display:flex;gap:12px;align-items:center}.profile-avatar{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:grid;place-items:center;color:#fff;font-size:20px;font-weight:800}.notice-item{border-left:4px solid var(--primary)}@media(min-width:700px){.mini-grid{grid-template-columns:repeat(4,1fr)}}#attendanceMap{height:220px;width:100%;border-radius:16px;overflow:hidden;border:1px solid var(--border-light);margin:10px 0 8px;z-index:1}.att-map-actions{display:flex;gap:8px;margin-bottom:10px}.att-map-actions button{flex:1}.att-map-caption{font-size:10px;color:var(--text-muted);text-align:center;margin:0 0 10px}.leaflet-container{font:11px Plus Jakarta Sans,Arial,sans-serif;background:#e2e8f0}.leaflet-control-attribution{font-size:8px}#sppMonitoringCard{padding:10px 12px!important;margin-bottom:10px!important}#sppMonitoringCard .mini-grid{gap:6px!important;margin:8px 0!important}#sppMonitoringCard .metric{padding:8px 7px!important;min-height:0!important;border-radius:12px!important}#sppMonitoringCard .metric b{font-size:17px!important}#sppMonitoringCard .metric small{font-size:9px!important}#sppMonitoringCard .spp-monitor-row{padding:7px 8px!important;margin-bottom:5px!important;border-radius:10px!important;gap:6px!important}#sppMonitoringCard .spp-monitor-name{font-size:12px!important;line-height:1.15!important}#sppMonitoringCard .spp-monitor-meta{font-size:9px!important;line-height:1.2!important}#sppMonitoringCard .spp-monitor-status{font-size:8px!important;padding:4px 6px!important;white-space:nowrap}#sppMonitoringCard .spp-monitor-action{font-size:9px!important;padding:5px 7px!important;white-space:nowrap}#sppMonitoringCard select{padding:6px 7px!important;font-size:10px!important}#newUserAgeGroup{background:var(--surface-subtle);color:var(--primary);text-align:center}#userAgeGroupFilter{font-weight:700}@media (min-width:900px){html,body{width:100%;min-width:100%}body{margin:0;padding:0;overflow-x:hidden}.app{width:100vw !important;max-width:none !important;min-width:0 !important;margin:0 !important}#mainApp.is-admin{width:100vw !important;max-width:none !important;padding-left:250px !important}#mainApp.is-admin .header-bg{width:100% !important;margin:0 !important}#mainApp.is-admin .content{width:100% !important;max-width:none !important;padding:0 28px 28px !important;margin-top:-26px !important}#mainApp.is-admin .content > #adminArea{width:100% !important;max-width:none !important;margin:0 !important}#mainApp.is-admin #adminArea > .card{width:100% !important}#mainApp.is-admin #tabDashboard{width:100%}#mainApp.is-admin #tabDashboard > .mini-grid{width:100%;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}#mainApp.is-admin #tabDashboard > .mini-grid .metric{min-height:92px;padding:18px;display:flex;flex-direction:column;justify-content:center}#mainApp.is-admin #tabDashboard > .mini-grid .metric b{font-size:28px}#mainApp.is-admin #tabDashboard > .mini-grid .metric small{font-size:12px}#mainApp.is-admin #tabDashboard > .card{margin-top:18px !important;width:100%;padding:22px !important}#mainApp.is-admin #tabDashboard > .card:nth-of-type(1),#mainApp.is-admin #tabDashboard > .card:nth-of-type(2){display:inline-block;vertical-align:top;width:calc(50% - 10px)}#mainApp.is-admin #tabDashboard > .card:nth-of-type(2){margin-left:16px}#mainApp.is-admin #attendanceChart{min-height:180px}#mainApp.is-admin #adminRanking{min-height:180px}#mainApp.is-admin .admin-form-card,#mainApp.is-admin .table-responsive,#mainApp.is-admin .search-row,#mainApp.is-admin .filter-row,#mainApp.is-admin #scheduleAdminList,#mainApp.is-admin #announcementAdminList,#mainApp.is-admin #notesAdminList,#mainApp.is-admin #pointsAdminList{width:100%}}@media (min-width:1200px){#mainApp.is-admin .content{padding-left:36px !important;padding-right:36px !important}#mainApp.is-admin #tabDashboard > .mini-grid{gap:22px}#mainApp.is-admin #tabDashboard > .card:nth-of-type(1),#mainApp.is-admin #tabDashboard > .card:nth-of-type(2){width:calc(50% - 12px)}}html,body,*{font-family:var(--font-modern)}h1,h2,h3,h4,h5,h6{letter-spacing:-.035em;line-height:1.15;font-weight:800}p{line-height:1.55}label,small,.metric small,.sidebar-brand small,.sidebar-user small{letter-spacing:.005em}.header-bg h1{font-size:clamp(22px,2.4vw,34px)!important;font-weight:800;letter-spacing:-.045em!important;line-height:1.05!important}.header-bg p{font-size:clamp(12px,1vw,14px);letter-spacing:-.01em}.metric b{font-size:clamp(24px,2vw,32px);font-weight:800;letter-spacing:-.045em;line-height:1}.card h3,.card h4{letter-spacing:-.035em;font-weight:800}.schedule-item b,.notice-item b,.note-item b{font-weight:750;letter-spacing:-.02em}.sidebar-brand b{font-size:15px;font-weight:800;letter-spacing:-.025em}.sidebar-brand span{font-weight:800;letter-spacing:.01em}.sidebar-user b{font-size:12px;font-weight:750;letter-spacing:-.015em}.sidebar-nav-item{font-size:11.5px;font-weight:700;letter-spacing:-.01em}.sidebar-footer-btn{font-size:11px;font-weight:700;letter-spacing:-.005em}.pill{letter-spacing:.01em}.badge{letter-spacing:.01em}@media(min-width:900px){#mainApp.is-admin .content{font-size:13px}#mainApp.is-admin .card{border-radius:20px}#mainApp.is-admin .card h3,#mainApp.is-admin .card h4{font-size:17px}#mainApp.is-admin .metric small{font-size:12px}#mainApp.is-admin .sidebar-nav-item{font-size:12px;padding:12px 13px}}</style>
 
 </head>
 <body>
@@ -637,14 +141,33 @@ button{letter-spacing:-.01em;}
       <!-- HALAMAN ADMIN -->
       <div id="adminArea" style="display:none;">
         <div class="card" style="margin-bottom:16px;">
-          <div class="admin-tabs" aria-hidden="true"></div>
           <div id="tabDashboard"><div class="export-container" style="justify-content:flex-end"><button class="btn-export" onclick="exportAllAdminDataExcel()">📊 Export Semua Excel</button><button class="btn-export-pdf" onclick="exportAllAdminDataPDF()">📄 Export Semua PDF</button></div><div class="mini-grid"><div class="metric"><b id="admTotalPlayers">0</b><small>Total Pemain</small></div><div class="metric"><b id="admTodayPresent">0</b><small>Hadir Hari Ini</small></div><div class="metric"><b id="admTodayLate">0</b><small>Terlambat</small></div><div class="metric"><b id="admUnpaid">0</b><small>SPP Belum Lunas</small></div></div><div class="card" style="margin-top:12px;margin-bottom:0;"><b>📈 Kehadiran 7 Hari</b><div id="attendanceChart" style="margin-top:10px;"></div></div><div class="card" style="margin-top:12px;margin-bottom:0;"><b>🏅 Poin & Pemain Teratas</b><div id="adminRanking"></div></div></div>
-          <div id="tabUsers" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('users')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('users')">📄 Export PDF</button></div><div class="admin-form-card"><h4 id="userFormTitle" style="margin:0 0 12px;font-size:13px;">➕ Tambah Pemain</h4><form id="addUserForm" onsubmit="handleSaveUser(event)"><input type="hidden" id="editUserIndex" value="-1"><div class="input-group"><label>ID Pemain / NIS</label><input type="text" id="newUserId" required></div><div class="input-group"><label>Nama Lengkap</label><input type="text" id="newUserName" required></div><div class="input-group"><label>Posisi / Peran</label><select id="newUserRole"><option>Flank</option><option>Anchor</option><option>Pivot</option><option>Goalkeeper</option><option>Pelatih / Official</option></select></div><div class="input-group"><label>Lapangan Utama</label><select id="newUserOffice" required></select></div><div class="input-group"><label>No. HP</label><input type="text" id="newUserPhone" placeholder="08xxxxxxxxxx"></div><div class="filter-row"><div class="input-group"><label>Tahun Lahir</label><input type="number" id="newUserBirthYear" min="2012" max="2019" step="1" placeholder="Contoh: 2017" required></div><div class="input-group"><label>Kelompok Umur Otomatis</label><input type="text" id="newUserAgeGroup" value="-" readonly style="font-weight:800;"></div></div><div class="input-group"><label>PIN / Password</label><input type="password" id="newUserPassword" required></div><button class="btn-go" type="submit" id="btnSaveUser">💾 Simpan Pemain</button><button type="button" id="btnCancelUser" onclick="resetUserForm()" style="display:none;margin-top:8px;" class="btn-secondary">Batal Edit</button></form></div><div class="search-row"><input id="userSearch" oninput="renderAdminTables()" placeholder="🔍 Cari nama / ID pemain..."></div><div class="filter-row"><select id="userAgeGroupFilter" onchange="renderAdminTables()"><option value="">Semua Kelompok Umur</option><option value="U10">U10 • 2017–2019</option><option value="U13">U13 • 2014–2016</option><option value="U16">U16 • 2012–2013</option><option value="LAINNYA">Lainnya / Belum Sesuai</option></select><div style="display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);font-weight:700;">Kelompok dihitung otomatis dari tahun lahir</div></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Pemain</th><th>Lahir</th><th>Kelompok</th><th>Posisi</th><th>Basecamp</th><th>SPP</th><th>Aksi</th></tr></thead><tbody id="userTableBody"></tbody></table></div></div>
+          <div id="tabUsers" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('users')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('users')">📄 Export PDF</button></div><div class="admin-form-card"><h4 id="userFormTitle" style="margin:0 0 12px;font-size:13px;">➕ Tambah Pemain</h4><form id="addUserForm" onsubmit="handleSaveUser(event)"><input type="hidden" id="editUserIndex" value="-1"><div class="input-group"><label>ID Pemain / NIS</label><input type="text" id="newUserId" required></div><div class="input-group"><label>Nama Lengkap</label><input type="text" id="newUserName" required></div><div class="input-group"><label>Posisi / Peran</label><select id="newUserRole"><option>Flank</option><option>Anchor</option><option>Pivot</option><option>Goalkeeper</option><option>Pelatih / Official</option></select></div><div class="input-group"><label>No. HP</label><input type="text" id="newUserPhone" placeholder="08xxxxxxxxxx"></div><div class="filter-row"><div class="input-group"><label>Tahun Lahir</label><input type="number" id="newUserBirthYear" step="1" placeholder="Contoh: 2017" required></div><div class="input-group"><label>Kelompok Umur Otomatis</label><input type="text" id="newUserAgeGroup" value="-" readonly style="font-weight:800;"></div></div><div class="input-group"><label>PIN / Password</label><input type="password" id="newUserPassword" required></div><button class="btn-go" type="submit" id="btnSaveUser">💾 Simpan Pemain</button><button type="button" id="btnCancelUser" onclick="resetUserForm()" style="display:none;margin-top:8px;" class="btn-secondary">Batal Edit</button></form></div><div class="search-row"><input id="userSearch" oninput="renderAdminTables()" placeholder="🔍 Cari nama / ID pemain..."></div><div class="filter-row"><select id="userAgeGroupFilter" onchange="renderAdminTables()"><option value="">Semua Kelompok Umur</option><option value="U10">U10 • 2017–2019</option><option value="U13">U13 • 2014–2016</option><option value="U16">U16 • 2012–2013</option><option value="LAINNYA">Lainnya / Belum Sesuai</option></select><div style="display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);font-weight:700;">Kelompok dihitung otomatis dari tahun lahir</div></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Pemain</th><th>Lahir</th><th>Kelompok</th><th>Posisi</th><th>Basecamp</th><th>SPP</th><th>Aksi</th></tr></thead><tbody id="userTableBody"></tbody></table></div></div>
           <div id="tabSchedules" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('schedules')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('schedules')">📄 Export PDF</button></div><div class="admin-form-card"><h4 id="scheduleFormTitle" style="margin:0 0 12px;font-size:13px;">🗓️ Tambah Jadwal Latihan</h4><form onsubmit="handleSaveSchedule(event)"><input type="hidden" id="editScheduleId"><div class="input-group"><label>Judul</label><input id="scheduleTitle" placeholder="Latihan Reguler" required></div><div class="filter-row"><div class="input-group"><label>Tanggal</label><input type="date" id="scheduleDate" required></div><div class="input-group"><label>Jam</label><input type="time" id="scheduleTime" required></div></div><div class="filter-row"><div class="input-group"><label>Lapangan</label><select id="scheduleOffice" required></select></div><div class="input-group"><label>Kelompok</label><input id="scheduleGroup" placeholder="U-17 / Semua"></div></div><div class="input-group"><label>Pelatih</label><input id="scheduleCoach" placeholder="Nama pelatih"></div><button class="btn-go">💾 Simpan Jadwal</button><button type="button" class="btn-secondary" id="btnCancelSchedule" onclick="resetScheduleForm()" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div id="scheduleAdminList"></div></div>
-          <div id="tabSpp" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('spp')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('spp')">📄 Export PDF</button></div><div class="admin-form-card"><h4 id="sppFormTitle" style="margin:0 0 12px;font-size:13px;">💳 Catat Pembayaran SPP</h4><form onsubmit="handleSaveSpp(event)"><input type="hidden" id="editSppId"><div class="input-group"><label>Pemain</label><select id="sppUserId" required></select></div><div class="filter-row"><div class="input-group"><label>Bulan</label><select id="sppMonth"></select></div><div class="input-group"><label>Tahun</label><input type="number" id="sppYear" value="2026" required></div></div><div class="filter-row"><div class="input-group"><label>Jumlah</label><input type="number" id="sppAmount" value="150000" required></div><div class="input-group"><label>Status</label><select id="sppStatusInput"><option>Lunas</option><option>Belum Lunas</option></select></div></div><div class="filter-row"><div class="input-group"><label>Tanggal Bayar</label><input type="date" id="sppPaidDate"></div><div class="input-group"><label>Metode</label><select id="sppMethod"><option>Transfer</option><option>Tunai</option><option>QRIS</option><option>Lainnya</option></select></div></div><div class="input-group"><label>Jatuh Tempo</label><input type="date" id="sppDueDate"></div><div class="input-group"><label>Catatan</label><textarea id="sppNotes" rows="2" placeholder="Opsional"></textarea></div><button class="btn-go">💾 Simpan SPP</button><button type="button" id="btnCancelSpp" onclick="resetSppForm()" class="btn-secondary" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div class="filter-row"><select id="sppFilterStatus" onchange="renderAdminTables()"><option value="">Semua Status</option><option>Lunas</option><option>Belum Lunas</option></select><select id="sppFilterYear" onchange="renderAdminTables()"><option value="">Semua Tahun</option></select></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Pemain</th><th>Periode</th><th>Jumlah</th><th>Status</th><th>Bayar</th><th>Aksi</th></tr></thead><tbody id="sppTableBody"></tbody></table></div></div>
+          <div id="tabSpp" style="display:none;">
+<div class="admin-form-card" id="sppMonitoringCard">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
+    <div>
+      <h4 style="margin:0;font-size:13px;">📊 Monitoring SPP</h4>
+      <small id="sppMonitorPeriodLabel" style="color:var(--text-muted);font-size:9px;">Bulan berjalan</small>
+    </div>
+    <div style="display:flex;gap:4px;align-items:center;">
+      <select id="sppMonitorMonth" onchange="renderSppMonitoring()"></select>
+      <select id="sppMonitorYear" onchange="renderSppMonitoring()"></select>
+    </div>
+  </div>
+  <div class="mini-grid" style="margin-top:12px;margin-bottom:12px;">
+    <div class="metric"><b id="sppMonTotal">0</b><small>Total Pemain</small></div>
+    <div class="metric"><b id="sppMonPaid">0</b><small>Sudah Bayar</small></div>
+    <div class="metric"><b id="sppMonUnpaid">0</b><small>Belum Bayar</small></div>
+    <div class="metric"><b id="sppMonReceived">Rp 0</b><small>Diterima</small></div>
+  </div>
+  <div id="sppMonitoringList"></div>
+</div>
+<div class="export-container"><button class="btn-export" onclick="exportDataExcel('spp')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('spp')">📄 Export PDF</button></div><div class="admin-form-card"><h4 id="sppFormTitle" style="margin:0 0 12px;font-size:13px;">💳 Catat Pembayaran SPP</h4><form onsubmit="handleSaveSpp(event)"><input type="hidden" id="editSppId"><div class="input-group"><label>Pemain</label><select id="sppUserId" required></select></div><div class="filter-row"><div class="input-group"><label>Bulan</label><select id="sppMonth"></select></div><div class="input-group"><label>Tahun</label><input type="number" id="sppYear" value="2026" required></div></div><div class="filter-row"><div class="input-group"><label>Jumlah</label><input type="number" id="sppAmount" value="150000" required></div><div class="input-group"><label>Status</label><select id="sppStatusInput"><option>Lunas</option><option>Belum Lunas</option></select></div></div><div class="filter-row"><div class="input-group"><label>Tanggal Bayar</label><input type="date" id="sppPaidDate"></div><div class="input-group"><label>Metode</label><select id="sppMethod"><option>Transfer</option><option>Tunai</option><option>QRIS</option><option>Lainnya</option></select></div></div><div class="input-group"><label>Jatuh Tempo</label><input type="date" id="sppDueDate"></div><div class="input-group"><label>Catatan</label><textarea id="sppNotes" rows="2" placeholder="Opsional"></textarea></div><small style="display:block;color:var(--text-muted);font-size:10px;margin:-4px 0 10px;">Jika status <b>Lunas</b>, setelah tersimpan tersedia tombol <b>🧾 PDF</b> dan <b>📲 WA</b>.</small><button class="btn-go">💾 Simpan SPP</button><button type="button" id="btnCancelSpp" onclick="resetSppForm()" class="btn-secondary" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div class="filter-row"><select id="sppFilterStatus" onchange="renderAdminTables()"><option value="">Semua Status</option><option>Lunas</option><option>Belum Lunas</option></select><select id="sppFilterYear" onchange="renderAdminTables()"><option value="">Semua Tahun</option></select></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Pemain</th><th>Periode</th><th>Jumlah</th><th>Status</th><th>Bayar</th><th>Aksi</th></tr></thead><tbody id="sppTableBody"></tbody></table></div></div>
           <div id="tabAttendance" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('attendance')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('attendance')">📄 Export PDF</button></div><div class="admin-form-card"><h4 id="attFormTitle" style="margin:0 0 12px;font-size:13px;">📋 Input / Edit Absensi Manual</h4><form onsubmit="handleSaveAttendance(event)"><input type="hidden" id="editAttId"><div class="input-group"><label>Pemain</label><select id="attUserId" required></select></div><div class="filter-row"><div class="input-group"><label>Tanggal</label><input type="date" id="attDate" required></div><div class="input-group"><label>Waktu</label><input type="time" id="attTime" required></div></div><div class="input-group"><label>Status</label><select id="attStatus"><option>Hadir</option><option>Terlambat</option><option>Izin</option><option>Sakit</option><option>Alpa</option></select></div><button class="btn-go">💾 Simpan Absensi</button><button type="button" id="btnCancelAtt" onclick="resetAttendanceForm()" class="btn-secondary" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div class="filter-row"><input type="date" id="attFilterDate" onchange="renderAdminTables()"><select id="attFilterStatus" onchange="renderAdminTables()"><option value="">Semua Status</option><option>Hadir</option><option>Terlambat</option><option>Izin</option><option>Sakit</option><option>Alpa</option></select></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Foto</th><th>Pemain</th><th>Tanggal/Jam</th><th>Status</th><th>Jarak</th><th>Aksi</th></tr></thead><tbody id="attendanceTableBody"></tbody></table></div></div>
           <div id="tabOffices" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('offices')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('offices')">📄 Export PDF</button></div><div class="admin-form-card"><h4 id="officeFormTitle" style="margin:0 0 12px;font-size:13px;">📍 Atur Tikor / Tempat Latihan</h4><form onsubmit="handleSaveOffice(event)"><input type="hidden" id="editOfficeId"><div class="input-group"><label>Nama Lapangan</label><input id="newOfficeName" required></div><div class="filter-row"><div class="input-group"><label>Latitude</label><input type="number" step="any" id="newOfficeLat" required></div><div class="input-group"><label>Longitude</label><input type="number" step="any" id="newOfficeLng" required></div></div><div class="filter-row"><div class="input-group"><label>Radius Meter</label><input type="number" id="newOfficeRadius" value="100" required></div><div class="input-group"><label>Alamat</label><input id="newOfficeAddress" placeholder="Alamat lapangan"></div></div><button class="btn-go">📍 Simpan Lapangan</button><button type="button" id="btnCancelOffice" onclick="resetOfficeForm()" class="btn-secondary" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Lapangan</th><th>Koordinat</th><th>Radius</th><th>Aksi</th></tr></thead><tbody id="officeTableBody"></tbody></table></div></div>
-          <div id="tabAcademy" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('academy')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('academy')">📄 Export PDF</button></div><div class="admin-form-card"><h4>📢 Pengumuman</h4><form onsubmit="handleSaveAnnouncement(event)"><input type="hidden" id="editAnnouncementId"><div class="input-group"><label>Judul</label><input id="announcementTitle" required></div><div class="input-group"><label>Isi</label><textarea id="announcementBody" rows="3" required></textarea></div><div class="filter-row"><div class="input-group"><label>Prioritas</label><select id="announcementPriority"><option>Normal</option><option>Penting</option></select></div><div class="input-group"><label>Tanggal</label><input type="date" id="announcementDate" required></div></div><button class="btn-go">📢 Publikasikan</button></form></div><div id="announcementAdminList"></div><div class="admin-form-card"><h4>📝 Catatan Pelatih</h4><form onsubmit="handleSaveCoachNote(event)"><input type="hidden" id="editNoteId"><div class="input-group"><label>Pemain</label><select id="noteUserId" required></select></div><div class="input-group"><label>Catatan</label><textarea id="noteBody" rows="3" required placeholder="Perkembangan, evaluasi, arahan..."></textarea></div><div class="input-group"><label>Jenis</label><select id="noteType"><option>Perkembangan</option><option>Evaluasi</option><option>Catatan</option></select></div><button class="btn-go">📝 Simpan Catatan</button></form></div><div id="notesAdminList"></div><div class="admin-form-card"><h4>🏆 Poin Pemain</h4><form onsubmit="handleSavePoint(event)"><div class="filter-row"><div class="input-group"><label>Pemain</label><select id="pointUserId" required></select></div><div class="input-group"><label>Poin (+/-)</label><input type="number" id="pointAmount" required></div></div><div class="input-group"><label>Alasan</label><input id="pointReason" required placeholder="Hadir latihan / disiplin / prestasi"></div><button class="btn-go">🏆 Tambah Poin</button></form></div><div id="pointsAdminList"></div></div>
+          <div id="tabAcademy" style="display:none;"><div class="export-container"><button class="btn-export" onclick="exportDataExcel('academy')">📊 Export Excel</button><button class="btn-export-pdf" onclick="exportDataPDF('academy')">📄 Export PDF</button></div><div class="admin-form-card"><h4>📢 Pengumuman</h4><form onsubmit="handleSaveAnnouncement(event)"><input type="hidden" id="editAnnouncementId"><div class="input-group"><label>Judul</label><input id="announcementTitle" required></div><div class="input-group"><label>Isi</label><textarea id="announcementBody" rows="3" required></textarea></div><div class="filter-row"><div class="input-group"><label>Prioritas</label><select id="announcementPriority"><option>Normal</option><option>Penting</option></select></div><div class="input-group"><label>Tanggal</label><input type="date" id="announcementDate" required></div></div><button class="btn-go" id="btnSaveAnnouncement">📢 Publikasikan</button><button type="button" class="btn-secondary" id="btnCancelAnnouncement" onclick="resetAnnouncementForm()" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div id="announcementAdminList"></div><div class="admin-form-card"><h4>📝 Catatan Pelatih</h4><form onsubmit="handleSaveCoachNote(event)"><input type="hidden" id="editNoteId"><div class="input-group"><label>Pemain</label><select id="noteUserId" required></select></div><div class="input-group"><label>Catatan</label><textarea id="noteBody" rows="3" required placeholder="Perkembangan, evaluasi, arahan..."></textarea></div><div class="input-group"><label>Jenis</label><select id="noteType"><option>Perkembangan</option><option>Evaluasi</option><option>Catatan</option></select></div><button class="btn-go" id="btnSaveNote">📝 Simpan Catatan</button><button type="button" class="btn-secondary" id="btnCancelNote" onclick="resetCoachNoteForm()" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div id="notesAdminList"></div><div class="admin-form-card"><h4>🏆 Poin Pemain</h4><form onsubmit="handleSavePoint(event)"><input type="hidden" id="editPointId"><div class="filter-row"><div class="input-group"><label>Pemain</label><select id="pointUserId" required></select></div><div class="input-group"><label>Poin (+/-)</label><input type="number" id="pointAmount" required></div></div><div class="input-group"><label>Alasan</label><input id="pointReason" required placeholder="Hadir latihan / disiplin / prestasi"></div><button class="btn-go" id="btnSavePoint">🏆 Tambah Poin</button><button type="button" class="btn-secondary" id="btnCancelPoint" onclick="resetPointForm()" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div id="pointsAdminList"></div></div>
         </div>
       </div>
     <!-- NAV ADMIN -->
@@ -741,7 +264,7 @@ function initTheme(){const t=localStorage.getItem('zetsu_theme')||'dark';documen
 function toggleTheme(){const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);localStorage.setItem('zetsu_theme',t);updateThemeUI(t)}
 function updateThemeUI(t){const d=t==='dark';if($('loginThemeIcon'))$('loginThemeIcon').textContent=d?'🌙':'☀️';if($('loginThemeText'))$('loginThemeText').textContent=d?'Gelap':'Terang';if($('burgerThemeLabel'))$('burgerThemeLabel').textContent=(d?'🌙 Gelap':'☀️ Terang')}
 const SUPABASE_URL='https://kvqfhifpfudzjbweyqix.supabase.co';const SUPABASE_KEY='sb_publishable_D2eL1fMCCB9Y1jPu1h-jqg_yupHB67v';const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let state={currentUserId:localStorage.getItem('zetsu_user')||null,users:[],offices:[],attendance:[],spp:[],schedules:[],announcements:[],notes:[],points:[],userPos:null,calculatedDistance:null,map:null,userMarker:null,officeCircle:null,currentStatus:'Hadir',selectedOffice:null,locationIntegrity:{checked:false,blocked:false,reason:'',mockDetected:false,developerModeDetected:false,lastTimestamp:0,lastLat:null,lastLng:null}};
+let state={currentUserId:localStorage.getItem('zetsu_user')||null,users:[],offices:[],attendance:[],spp:[],schedules:[],announcements:[],notes:[],points:[],userPos:null,calculatedDistance:null,map:null,userMarker:null,currentStatus:'Hadir',selectedOffice:null,locationIntegrity:{checked:false,blocked:false,reason:'',mockDetected:false,developerModeDetected:false,lastTimestamp:0,lastLat:null,lastLng:null}};
 function calculateDistance(a,b,c,d){const R=6371e3,p1=a*Math.PI/180,p2=c*Math.PI/180,dp=(c-a)*Math.PI/180,dl=(d-b)*Math.PI/180,x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return Math.round(R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)))}
 
 /* =========================
@@ -793,24 +316,24 @@ async function fetchTable(table,transform=x=>x){try{const r=await supabaseClient
 async function loadInitialData(){initTheme();try{state.offices=await fetchTable('offices');state.users=await fetchTable('users',u=>({...u,officeId:u.office_id,sppStatus:u.spp_status||'Belum Lunas'}));state.attendance=await fetchTable('attendance',a=>({...a,userId:a.user_id,userName:a.user_name,photoUrl:a.photo_url||null}));state.spp=await fetchTable('spp',s=>({...s,userId:s.user_id,userName:s.user_name}));state.schedules=await fetchTable('schedules');state.announcements=await fetchTable('announcements');state.notes=await fetchTable('coach_notes');state.points=await fetchTable('player_points');if(!state.users.length)console.warn('Tidak ada data users yang berhasil dimuat.')}catch(e){console.error('loadInitialData:',e)}finally{$('appLoadingScreen').style.display='none';renderApp()}}
 async function handleLogin(e){e.preventDefault();const u=$('inputUsername').value.trim(),p=$('inputPassword').value.trim(),btn=$('loginBtn');if(!u||!p)return;btn.disabled=true;btn.textContent='⏳ Memeriksa...';try{let r=await supabaseClient.from('users').select('*').ilike('id',u).limit(1).maybeSingle();if(r.error)throw r.error;const found=r.data;if(!found){Swal.fire('Gagal Masuk','ID pemain/admin tidak ditemukan','error');return}if(String(found.pin)!==p){Swal.fire('Gagal Masuk','PIN salah','error');return}const user={...found,officeId:found.office_id,sppStatus:found.spp_status||'Belum Lunas'};const idx=state.users.findIndex(x=>String(x.id).toLowerCase()===String(user.id).toLowerCase());if(idx>=0)state.users[idx]=user;else state.users.push(user);state.currentUserId=user.id;localStorage.setItem('zetsu_user',user.id);Swal.fire({icon:'success',title:'Berhasil Masuk!',text:`Selamat datang, ${user.name}`,timer:1200,showConfirmButton:false});renderApp()}catch(e){console.error('Login Supabase:',e);Swal.fire('Koneksi Supabase Gagal',e.message||'Tidak dapat mengakses tabel users','error')}finally{btn.disabled=false;btn.textContent='🔑 Masuk Sistem'}}
 function handleLogout(){localStorage.removeItem('zetsu_user');state.currentUserId=null;renderApp()}
-function renderApp(){if(!state.currentUserId){$('loginScreen').style.display='flex';$('mainApp').style.display='none';$('adminBottomNav').style.display='none';return}const u=state.users.find(x=>String(x.id)===String(state.currentUserId))||{id:state.currentUserId,name:state.currentUserId,role:'Pemain'};$('loginScreen').style.display='none';$('mainApp').style.display='block';$('displayName').textContent=u.name;$('avatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('displayRoleBadge').innerHTML=`<span class="badge">${esc(u.role||'Pemain')}</span>`;const admin=String(u.id)==='admin'||String(u.role||'').includes('Pelatih');$('adminArea').style.display=admin?'block':'none';$('employeeArea').style.display=admin?'none':'block';$('adminBottomNav').style.display=admin?'flex':'none';$('mainApp').classList.toggle('is-admin',admin);if(admin){$('sidebarAvatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('sidebarName').textContent=u.name||'Administrator';renderAdminTables();switchAdminTab('dashboard')}else renderEmployeeDashboard(u)}
+function renderApp(){if(!state.currentUserId){$('loginScreen').style.display='flex';$('mainApp').style.display='none';$('adminBottomNav').style.display='none';return}const u=state.users.find(x=>String(x.id)===String(state.currentUserId))||{id:state.currentUserId,name:state.currentUserId,role:'Pemain'};$('loginScreen').style.display='none';$('mainApp').style.display='block';$('displayName').textContent=u.name;$('avatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('displayRoleBadge').innerHTML=`<span class="badge">${esc(u.role||'Pemain')}</span>`;const admin=String(u.id)==='admin'||String(u.role||'').includes('Pelatih');$('adminArea').style.display=admin?'block':'none';$('employeeArea').style.display=admin?'none':'block';$('adminBottomNav').style.display=admin?'flex':'none';$('mainApp').classList.toggle('is-admin',admin);if(admin){$('sidebarAvatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('sidebarName').textContent=u.name||'Administrator';renderAdminTables();const savedTab=localStorage.getItem('zetsu_admin_tab');const validTabs=['dashboard','users','schedules','spp','attendance','offices','academy'];switchAdminTab(validTabs.includes(savedTab)?savedTab:'dashboard')}else renderEmployeeDashboard(u)}
 function monthName(m){return ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][m]}
 function currentSpp(user){const n=new Date();return state.spp.find(s=>String(s.user_id??s.userId)===String(user.id)&&Number(s.year)===n.getFullYear()&&String(s.month)===monthName(n.getMonth()))||null}
 function calcStreak(userId){const days=[...new Set(state.attendance.filter(a=>String(a.user_id??a.userId)===String(userId)&&['Hadir','Terlambat'].includes(a.status)).map(a=>String(a.date||a.time||'').slice(0,10)).filter(Boolean))].sort().reverse();let streak=0,d=new Date();for(const x of days){const ds=d.toISOString().slice(0,10);if(x===ds){streak++;d.setDate(d.getDate()-1)}else if(streak===0){d.setDate(d.getDate()-1);if(x===d.toISOString().slice(0,10)){streak++;d.setDate(d.getDate()-1)}else break}else break}return streak}
 function userPoints(id){return state.points.filter(p=>String(p.user_id??p.userId)===String(id)).reduce((a,p)=>a+Number(p.amount||0),0)}
-function renderEmployeeDashboard(user){const office=state.offices.find(o=>String(o.id)===String(user.office_id??user.officeId))||state.offices[0]||{name:'Belum Diplot'};$('assignedBasecampName')&&($('assignedBasecampName').textContent=office.name);$('playerProfileName').textContent=user.name;$('playerProfileMeta').textContent=`${user.id} • ${user.role||'Pemain'} • ${office.name}`;$('playerAvatar').textContent=(user.name||'ZS').slice(0,2).toUpperCase();const logs=state.attendance.filter(a=>String(a.user_id??a.userId)===String(user.id));const hadir=logs.filter(a=>a.status==='Hadir').length,late=logs.filter(a=>a.status==='Terlambat').length;$('hadirCount').textContent=hadir;$('terlambatCount').textContent=late;$('attendancePercent').textContent=logs.length?Math.round((hadir+late)/logs.length*100)+'%':'0%';const pts=userPoints(user.id),streak=calcStreak(user.id);$('playerPoints').textContent=pts;$('playerStreak').textContent=streak+'x';$('streakProgress').style.width=Math.min(streak*20,100)+'%';const spp=currentSpp(user);if($('sppStatus'))$('sppStatus').textContent=spp?spp.status:(user.spp_status||'Belum Bayar');$('playerSppCard').innerHTML=spp?`<b>${esc(spp.month)} ${spp.year} • ${money(spp.amount)}</b><span class="pill">${esc(spp.status)}</span><small style="display:block;color:var(--text-muted);margin-top:5px;">${spp.method||'-'} ${spp.paid_date?'• '+spp.paid_date:''}</small>`:'<b>Belum ada catatan SPP bulan ini</b>';
+function renderEmployeeDashboard(user){const office=state.offices.find(o=>String(o.id)===String(user.office_id??user.officeId))||state.offices[0]||{name:'Belum Diplot'};$('playerProfileName').textContent=user.name;$('playerProfileMeta').textContent=`${user.id} • ${user.role||'Pemain'} • ${office.name}`;$('playerAvatar').textContent=(user.name||'ZS').slice(0,2).toUpperCase();const logs=state.attendance.filter(a=>String(a.user_id??a.userId)===String(user.id));const hadir=logs.filter(a=>a.status==='Hadir').length,late=logs.filter(a=>a.status==='Terlambat').length;$('hadirCount').textContent=hadir;$('terlambatCount').textContent=late;$('attendancePercent').textContent=logs.length?Math.round((hadir+late)/logs.length*100)+'%':'0%';const pts=userPoints(user.id),streak=calcStreak(user.id);$('playerPoints').textContent=pts;$('playerStreak').textContent=streak+'x';$('streakProgress').style.width=Math.min(streak*20,100)+'%';const spp=currentSpp(user);$('playerSppCard').innerHTML=spp?`<b>${esc(spp.month)} ${spp.year} • ${money(spp.amount)}</b><span class="pill">${esc(spp.status)}</span><small style="display:block;color:var(--text-muted);margin-top:5px;">${spp.method||'-'} ${spp.paid_date?'• '+spp.paid_date:''}</small>`:'<b>Belum ada catatan SPP bulan ini</b>';
 const upcoming=state.schedules.filter(s=>String(s.date)>=today()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];$('playerNextSchedule').innerHTML=upcoming?`<b>${esc(upcoming.title)}</b><span>${upcoming.date} • ${upcoming.time} • ${esc((state.offices.find(o=>String(o.id)===String(upcoming.office_id))||{}).name||'-')}</span><small style="display:block;color:var(--text-muted);margin-top:4px;">${esc(upcoming.group_name||'Semua')} • ${esc(upcoming.coach||'-')}</small>`:'<b>Belum ada jadwal latihan</b>';
 $('playerAnnouncements').innerHTML=state.announcements.slice(0,5).map(a=>`<div class="notice-item"><b>${esc(a.title)} ${a.priority==='Penting'?'<span class="pill">PENTING</span>':''}</b><span>${esc(a.body)}</span><small style="display:block;color:var(--text-muted);margin-top:5px;">${a.date||''}</small></div>`).join('')||'<div class="empty">Belum ada pengumuman.</div>';$('playerNotes').innerHTML=state.notes.filter(n=>String(n.user_id??n.userId)===String(user.id)).slice(0,5).map(n=>`<div class="note-item"><b>${esc(n.note_type||'Catatan')}</b><span>${esc(n.body)}</span><small style="display:block;color:var(--text-muted);margin-top:5px;">${n.created_at?new Date(n.created_at).toLocaleDateString('id-ID'):''}</small></div>`).join('')||'<div class="empty">Belum ada catatan.</div>';$('playerHistoryCount').textContent=logs.length+' Catatan';$('playerAttendanceHistoryBody').innerHTML=logs.slice(0,20).map(a=>`<tr><td>${a.photoUrl?`<img src="${esc(a.photoUrl)}" class="img-thumb" onclick="previewImage('${esc(a.photoUrl)}')">`:'-'}</td><td><b>${esc(a.date||'')}</b><br><small>${esc(a.time||'')}</small></td><td>${esc((state.offices.find(o=>String(o.id)===String(a.office_id))||office).name||'-')}</td><td><span class="badge ${a.status==='Hadir'?'success':a.status==='Terlambat'?'pending':'danger'}">${esc(a.status)}</span></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Belum ada riwayat.</td></tr>'}
-function switchAdminTab(tab){const tabs=['dashboard','users','schedules','spp','attendance','offices','academy'];tabs.forEach(t=>{const e=$('tab'+t.charAt(0).toUpperCase()+t.slice(1));if(e)e.style.display=t===tab?'block':'none'});document.querySelectorAll('.admin-tabs button,.bottom-nav-item').forEach(b=>b.classList.remove('active'));document.querySelectorAll(`[onclick="switchAdminTab('${tab}')"]`).forEach(b=>b.classList.add('active'));if(tab==='dashboard')renderAdminDashboard()}
+function switchAdminTab(tab){const tabs=['dashboard','users','schedules','spp','attendance','offices','academy'];if(tabs.includes(tab))localStorage.setItem('zetsu_admin_tab',tab);tabs.forEach(t=>{const e=$('tab'+t.charAt(0).toUpperCase()+t.slice(1));if(e)e.style.display=t===tab?'block':'none'});document.querySelectorAll('.bottom-nav-item').forEach(b=>b.classList.remove('active'));document.querySelectorAll(`[onclick="switchAdminTab('${tab}')"]`).forEach(b=>b.classList.add('active'));if(tab==='dashboard')renderAdminDashboard();if(tab==='spp')renderSppMonitoring()}
 function fillSelect(id,items,placeholder){const e=$(id);if(!e)return;e.innerHTML=(placeholder?`<option value="">${placeholder}</option>`:'')+items.map(x=>`<option value="${esc(x.id)}">${esc(x.name||x.title||x.id)}</option>`).join('')}
-function renderAdminTables(){fillSelect('newUserOffice',state.offices,'Pilih lapangan');fillSelect('scheduleOffice',state.offices,'Pilih lapangan');const players=state.users.filter(u=>String(u.id)!=='admin');fillSelect('sppUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('attUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('noteUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('pointUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');const sm=$('sppMonth');if(sm&&!sm.options.length)sm.innerHTML=monthName(new Date().getMonth());else if(sm&&!sm.value)sm.value=monthName(new Date().getMonth());if($('sppYear')){const years=[...new Set([new Date().getFullYear(),...state.spp.map(s=>s.year)])].sort().reverse();$('sppFilterYear').innerHTML='<option value="">Semua Tahun</option>'+years.map(y=>`<option>${y}</option>`).join('')}
+function renderAdminTables(){fillSelect('scheduleOffice',state.offices,'Pilih lapangan');const players=state.users.filter(u=>String(u.id)!=='admin');fillSelect('sppUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('attUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('noteUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('pointUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');const sm=$('sppMonth');if(sm&&!sm.options.length)sm.innerHTML=monthName(new Date().getMonth());else if(sm&&!sm.value)sm.value=monthName(new Date().getMonth());if($('sppYear')){const years=[...new Set([new Date().getFullYear(),...state.spp.map(s=>s.year)])].sort().reverse();$('sppFilterYear').innerHTML='<option value="">Semua Tahun</option>'+years.map(y=>`<option>${y}</option>`).join('')}
 const q=($('userSearch')?.value||'').toLowerCase(),gf=$('userAgeGroupFilter')?.value||'';const filteredPlayers=players.filter(u=>{const matchQ=(u.name+' '+u.id).toLowerCase().includes(q);const group=ageGroupLabel(u.birth_year??u.birthYear);return matchQ&&(!gf||(gf==='LAINNYA'?group==='Lainnya':group===gf));});$('userTableBody').innerHTML=filteredPlayers.map(u=>{const by=u.birth_year??u.birthYear??'';const group=getAgeGroup(by);const groupClass=group==='U10'?'success':group==='U13'?'pending':group==='U16'?'':'danger';return `<tr><td><b>${esc(u.name)}</b><br><small>${esc(u.id)}</small></td><td><b>${esc(by||'-')}</b></td><td><span class="badge ${groupClass}">${esc(ageGroupLabel(by))}</span></td><td>${esc(u.role)}</td><td>${esc((state.offices.find(o=>String(o.id)===String(u.office_id??u.officeId))||{}).name||'-')}</td><td>${esc(u.spp_status||u.sppStatus||'Belum Lunas')}</td><td><button class="btn-warning" onclick="editUser('${esc(u.id)}')">Edit</button> <button class="btn-danger" onclick="deleteUser('${esc(u.id)}')">Hapus</button></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Tidak ada pemain.</td></tr>';
-const sf=$('sppFilterStatus')?.value||'',sy=$('sppFilterYear')?.value||'';$('sppTableBody').innerHTML=state.spp.filter(s=>(!sf||s.status===sf)&&(!sy||String(s.year)===sy)).map(s=>`<tr><td><b>${esc(s.user_name||s.userName||s.user_id)}</b><br><small>${esc(s.user_id||s.userId)}</small></td><td>${esc(s.month)} ${s.year}</td><td>${money(s.amount)}</td><td><span class="badge ${s.status==='Lunas'?'success':'danger'}">${esc(s.status)}</span></td><td>${s.paid_date||'-'}<br><small>${esc(s.method||'')}</small></td><td><button class="btn-warning" onclick="editSpp('${esc(s.id)}')">Edit</button> <button class="btn-danger" onclick="deleteSppRecord('${esc(s.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Belum ada data SPP.</td></tr>';
+const sf=$('sppFilterStatus')?.value||'',sy=$('sppFilterYear')?.value||'';$('sppTableBody').innerHTML=state.spp.filter(s=>(!sf||s.status===sf)&&(!sy||String(s.year)===sy)).map(s=>`<tr><td><b>${esc(s.user_name||s.userName||s.user_id)}</b><br><small>${esc(s.user_id||s.userId)}</small></td><td>${esc(s.month)} ${s.year}</td><td>${money(s.amount)}</td><td><span class="badge ${s.status==='Lunas'?'success':'danger'}">${esc(s.status)}</span></td><td>${s.paid_date||'-'}<br><small>${esc(s.method||'')}</small></td><td><button class="btn-warning" onclick="editSpp('${esc(s.id)}')">Edit</button> <button class="btn-danger" onclick="deleteSppRecord('${esc(s.id)}')">Hapus</button>${s.status==='Lunas'?` <button class="btn-go" style="margin-top:5px;font-size:10px;padding:7px 9px;" onclick="printSppReceipt('${esc(s.id)}')">🧾 PDF</button> <button class="btn-secondary" style="margin-top:5px;font-size:10px;padding:7px 9px;" onclick="sendSppWhatsApp('${esc(s.id)}')">📲 WA</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">Belum ada data SPP.</td></tr>';
 const ad=$('attFilterDate')?.value||'',as=$('attFilterStatus')?.value||'';$('attendanceTableBody').innerHTML=state.attendance.filter(a=>(!ad||a.date===ad)&&(!as||a.status===as)).map(a=>`<tr><td>${a.photo_url||a.photoUrl?`<img src="${esc(a.photo_url||a.photoUrl)}" class="img-thumb">`:'-'}</td><td><b>${esc(a.user_name||a.userName)}</b><br><small>${esc(a.user_id||a.userId)}</small></td><td>${esc(a.date||'')}<br>${esc(a.time||'')}</td><td>${esc(a.status)}</td><td>${a.distance||0}m</td><td><button class="btn-warning" onclick="editAttendance('${esc(a.id)}')">Edit</button> <button class="btn-danger" onclick="deleteAttendance('${esc(a.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Belum ada absensi.</td></tr>';$('officeTableBody').innerHTML=state.offices.map(o=>`<tr><td><b>${esc(o.name)}</b><br><small>${esc(o.address||'')}</small></td><td>${o.lat}, ${o.lng}</td><td>${o.radius}m</td><td><button class="btn-warning" onclick="editOffice('${esc(o.id)}')">Edit</button> <button class="btn-danger" onclick="deleteOffice('${esc(o.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Belum ada lapangan.</td></tr>';renderSchedules();renderAcademyLists();renderAdminDashboard()}
 function renderAdminDashboard(){if(!$('admTotalPlayers'))return;const ps=state.users.filter(u=>String(u.id)!=='admin'),d=today(),td=state.attendance.filter(a=>a.date===d);$('admTotalPlayers').textContent=ps.length;$('admTodayPresent').textContent=td.filter(a=>a.status==='Hadir').length;$('admTodayLate').textContent=td.filter(a=>a.status==='Terlambat').length;$('admUnpaid').textContent=ps.filter(u=>(u.spp_status||u.sppStatus)!=='Lunas').length;const days=[...Array(7)].map((_,i)=>{const x=new Date();x.setDate(x.getDate()-6+i);const ds=x.toISOString().slice(0,10);return{ds,n:state.attendance.filter(a=>a.date===ds&&['Hadir','Terlambat'].includes(a.status)).length}});const max=Math.max(1,...days.map(x=>x.n));$('attendanceChart').innerHTML=days.map(x=>`<div class="bar-row"><span>${x.ds.slice(5)}</span><div class="bar"><span style="width:${x.n/max*100}%"></span></div><b>${x.n}</b></div>`).join('');$('adminRanking').innerHTML=ps.map(u=>({u,p:userPoints(u.id)})).sort((a,b)=>b.p-a.p).slice(0,5).map((x,i)=>`<div class="rank-row"><div class="rank-num">${i+1}</div><div style="flex:1"><b>${esc(x.u.name)}</b><small style="display:block;color:var(--text-muted)">${esc(x.u.role||'Pemain')}</small></div><strong>${x.p} pts</strong></div>`).join('')||'<div class="empty">Belum ada poin.</div>'}
 async function dbSave(table,payload,id){const q=id?supabaseClient.from(table).update(payload).eq('id',id):supabaseClient.from(table).insert([payload]).select();return await q}
-async function handleSaveUser(e){e.preventDefault();const idx=+$('editUserIndex').value,id=$('newUserId').value.trim(),birthYear=Number($('newUserBirthYear').value);if(!getAgeGroup(birthYear)){Swal.fire('Tahun Lahir Tidak Sesuai','Gunakan tahun 2012–2019 agar masuk U10/U13/U16.','warning');return}const payload={name:$('newUserName').value.trim(),role:$('newUserRole').value,office_id:$('newUserOffice').value,pin:$('newUserPassword').value,phone:$('newUserPhone').value.trim(),birth_year:birthYear};let r=idx>=0?await dbSave('users',payload,state.users[idx].id):await dbSave('users',{id,...payload,spp_status:'Belum Lunas'});if(!r.error){await reload();resetUserForm();Swal.fire('Sukses','Data pemain tersimpan • Kelompok '+getAgeGroup(birthYear),'success')}else Swal.fire('Gagal',r.error.message,'error')}
-function editUser(id){const i=state.users.findIndex(u=>String(u.id)===String(id)),u=state.users[i];if(!u)return;$('editUserIndex').value=i;$('newUserId').value=u.id;$('newUserId').disabled=true;$('newUserName').value=u.name||'';$('newUserRole').value=u.role||'Flank';$('newUserOffice').value=(u.office_id??u.officeId??'');$('newUserPhone').value=u.phone||'';$('newUserBirthYear').value=u.birth_year??u.birthYear??'';updateAgeGroupPreview();$('newUserPassword').value=u.pin||'';$('userFormTitle').textContent='✏️ Edit Pemain';$('btnSaveUser').textContent='💾 Perbarui';$('btnCancelUser').style.display='block'}
+async function handleSaveUser(e){e.preventDefault();const idx=+$('editUserIndex').value,id=$('newUserId').value.trim(),birthYear=Number($('newUserBirthYear').value);if(!Number.isFinite(birthYear)||birthYear<=0){Swal.fire('Tahun Lahir Tidak Valid','Masukkan tahun lahir yang benar.','warning');return}const payload={name:$('newUserName').value.trim(),role:$('newUserRole').value,office_id:null,pin:$('newUserPassword').value,phone:$('newUserPhone').value.trim(),birth_year:birthYear};if(idx>=0){payload.office_id=state.users[idx].office_id??state.users[idx].officeId??null}let r=idx>=0?await dbSave('users',payload,state.users[idx].id):await dbSave('users',{id,...payload,spp_status:'Belum Lunas'});if(!r.error){await reload();resetUserForm();Swal.fire('Sukses','Data pemain tersimpan • Kelompok '+ageGroupLabel(birthYear),'success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editUser(id){const i=state.users.findIndex(u=>String(u.id)===String(id)),u=state.users[i];if(!u)return;$('editUserIndex').value=i;$('newUserId').value=u.id;$('newUserId').disabled=true;$('newUserName').value=u.name||'';$('newUserRole').value=u.role||'Flank';$('newUserPhone').value=u.phone||'';$('newUserBirthYear').value=u.birth_year??u.birthYear??'';updateAgeGroupPreview();$('newUserPassword').value=u.pin||'';$('userFormTitle').textContent='✏️ Edit Pemain';$('btnSaveUser').textContent='💾 Perbarui';$('btnCancelUser').style.display='block'}
 function resetUserForm(){$('editUserIndex').value=-1;$('addUserForm').reset();$('newUserId').disabled=false;$('newUserAgeGroup').value='-';$('userFormTitle').textContent='➕ Tambah Pemain';$('btnSaveUser').textContent='💾 Simpan Pemain';$('btnCancelUser').style.display='none'}
 document.addEventListener('input',e=>{if(e.target?.id==='newUserBirthYear')updateAgeGroupPreview()});
 async function deleteUser(id){if((await Swal.fire({title:'Hapus pemain?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya, hapus'})).isConfirmed){const r=await supabaseClient.from('users').delete().eq('id',id);if(!r.error)reload();else Swal.fire('Gagal',r.error.message,'error')}}
@@ -819,8 +342,330 @@ function resetScheduleForm(){$('editScheduleId').value='';document.querySelector
 function renderSchedules(){$('scheduleAdminList').innerHTML=state.schedules.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).map(s=>`<div class="schedule-item"><b>${esc(s.title)}</b><span>${s.date} • ${s.time} • ${esc((state.offices.find(o=>String(o.id)===String(s.office_id))||{}).name||'-')}</span><small style="display:block;color:var(--text-muted);">${esc(s.group_name||'Semua')} • ${esc(s.coach||'-')}</small><div style="margin-top:7px"><button class="btn-warning" onclick="editSchedule('${esc(s.id)}')">Edit</button> <button class="btn-danger" onclick="deleteSchedule('${esc(s.id)}')">Hapus</button></div></div>`).join('')||'<div class="empty">Belum ada jadwal.</div>'}
 function editSchedule(id){const s=state.schedules.find(x=>String(x.id)===String(id));$('editScheduleId').value=s.id;$('scheduleTitle').value=s.title;$('scheduleDate').value=s.date;$('scheduleTime').value=s.time;$('scheduleOffice').value=s.office_id;$('scheduleGroup').value=s.group_name||'';$('scheduleCoach').value=s.coach||'';$('btnCancelSchedule').style.display='block'}
 async function deleteSchedule(id){if((await Swal.fire({title:'Hapus jadwal?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('schedules').delete().eq('id',id);if(!r.error)reload()}}
-async function handleSaveSpp(e){e.preventDefault();const id=$('editSppId').value,u=state.users.find(x=>String(x.id)===String($('sppUserId').value)),p={user_id:u.id,user_name:u.name,month:$('sppMonth').value,year:+$('sppYear').value,amount:+$('sppAmount').value,status:$('sppStatusInput').value,paid_date:$('sppPaidDate').value||null,method:$('sppMethod').value,due_date:$('sppDueDate').value||null,notes:$('sppNotes').value};const r=await dbSave('spp',p,id);if(!r.error){await supabaseClient.from('users').update({spp_status:p.status}).eq('id',u.id);reload();resetSppForm();Swal.fire('Sukses','SPP tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+async function handleSaveSpp(e){
+  e.preventDefault();
+  const id=$('editSppId').value;
+  const u=state.users.find(x=>String(x.id)===String($('sppUserId').value));
+  if(!u)return Swal.fire('Pilih pemain','Silakan pilih pemain terlebih dahulu.','warning');
+  let month=$('sppMonth').value;
+  let year=Number($('sppYear').value);
+  const status=$('sppStatusInput').value;
+  const paidDate=$('sppPaidDate').value||null;
+  if(status==='Lunas' && paidDate){
+    const d=new Date(paidDate+'T00:00:00');
+    if(!Number.isNaN(d.getTime())){month=SPP_MONTHS_ID[d.getMonth()];year=d.getFullYear();$('sppMonth').value=month;$('sppYear').value=year;}
+  }
+  const p={user_id:u.id,user_name:u.name,month,year,amount:+$('sppAmount').value,status,paid_date:paidDate,method:$('sppMethod').value,due_date:$('sppDueDate').value||null,notes:$('sppNotes').value};
+  const r=await dbSave('spp',p,id);
+  if(r.error)return Swal.fire('Gagal',r.error.message,'error');
+
+  const ur=await supabaseClient.from('users').update({spp_status:p.status}).eq('id',u.id);
+  if(ur.error)console.warn('Update status SPP pemain:',ur.error);
+
+  // Update state secara langsung dari transaksi yang baru berhasil disimpan.
+  // Jangan mengganti state dengan hasil fetch kosong/transient karena itu membuat
+  // Monitoring sementara menganggap semua pemain BELUM BAYAR sampai browser direfresh.
+  const savedId=id||r.data?.[0]?.id;
+  const savedRow={...(id?(state.spp.find(x=>String(x.id)===String(id))||{}):{}),...p,...(r.data?.[0]||{}),id:savedId};
+  if(savedId!=null){
+    const idx=state.spp.findIndex(x=>String(x.id)===String(savedId));
+    if(idx>=0)state.spp[idx]={...state.spp[idx],...savedRow};else state.spp.push(savedRow);
+  }else if(!id){
+    state.spp.push(savedRow);
+  }
+  const ui=state.users.findIndex(x=>String(x.id)===String(u.id));
+  if(ui>=0)state.users[ui]={...state.users[ui],spp_status:p.status,sppStatus:p.status};
+  renderAdminTables();
+  renderSppMonitoring();
+  resetSppForm();
+
+  // Sinkronisasi ulang di background untuk memastikan state tetap sama dengan DB,
+  // tanpa mengosongkan monitoring jika request fetch mengalami error sesaat.
+  Promise.all([
+    supabaseClient.from('spp').select('*'),
+    supabaseClient.from('users').select('*')
+  ]).then(([sr,ur2])=>{
+    if(!sr.error && Array.isArray(sr.data) && sr.data.length){
+      state.spp=sr.data.map(s=>({...s,userId:s.user_id,userName:s.user_name}));
+    }
+    if(!ur2.error && Array.isArray(ur2.data) && ur2.data.length){
+      state.users=ur2.data.map(x=>({...x,officeId:x.office_id,sppStatus:x.spp_status||'Belum Lunas'}));
+    }
+    renderAdminTables();
+    renderSppMonitoring();
+  }).catch(err=>console.warn('Sinkronisasi SPP:',err));
+  if(p.status==='Lunas'){
+    Swal.fire({icon:'success',title:'SPP Lunas',html:`Pembayaran <b>${esc(p.user_name)}</b> untuk ${esc(p.month)} ${p.year} sudah tersimpan.<br><br><button id="swalPrintSpp" class="swal2-confirm swal2-styled">🧾 Cetak Struk PDF</button> <button id="swalWaSpp" class="swal2-confirm swal2-styled">📲 Kirim ke WhatsApp</button>`,showConfirmButton:false,showCloseButton:true,didOpen:()=>{$('swalPrintSpp')?.addEventListener('click',()=>printSppReceiptByData(p));$('swalWaSpp')?.addEventListener('click',()=>sendSppWhatsAppByData(p))}})
+  }else Swal.fire('Sukses','SPP tersimpan','success');
+}
+
 function editSpp(id){const s=state.spp.find(x=>String(x.id)===String(id));$('editSppId').value=s.id;$('sppUserId').value=s.user_id??s.userId;$('sppMonth').value=s.month;$('sppYear').value=s.year;$('sppAmount').value=s.amount;$('sppStatusInput').value=s.status;$('sppPaidDate').value=s.paid_date||'';$('sppMethod').value=s.method||'Transfer';$('sppDueDate').value=s.due_date||'';$('sppNotes').value=s.notes||'';$('btnCancelSpp').style.display='block'}
+
+function normalizeWaNumber(phone){
+  let n=String(phone||'').replace(/[^\d]/g,'');
+  if(n.startsWith('0'))n='62'+n.slice(1);
+  if(n.startsWith('8'))n='62'+n;
+  return n;
+}
+function getSppReceiptData(id){
+  const s=state.spp.find(x=>String(x.id)===String(id));
+  if(!s)return null;
+  const u=state.users.find(x=>String(x.id)===String(s.user_id??s.userId));
+  return {...s,user:u||null};
+}
+async function buildSppReceiptPdf(s){
+  const C=window.jspdf?.jsPDF;
+  if(!C)throw new Error('Library PDF belum termuat. Coba refresh halaman.');
+  if(s.status!=='Lunas')throw new Error('Struk hanya dapat dibuat untuk SPP berstatus Lunas.');
+  const name=s.user_name||s.user?.name||'-';
+  const uid=s.user_id||s.userId||s.user?.id||'-';
+  const phone=s.user?.phone||'-';
+  const date=s.paid_date||today();
+  const period=`${s.month} ${s.year}`;
+  const amount=money(s.amount);
+  const method=s.method||'-';
+  const notes=s.notes?String(s.notes):'';
+  const W=80,H=178;
+  const doc=new C({orientation:'portrait',unit:'mm',format:[W,H]});
+  const cx=W/2;
+  const line=(y)=>{doc.setLineWidth(.25);doc.line(5,y,W-5,y)};
+  const dashed=(y)=>{doc.setLineDashPattern([1.5,1.2],0);doc.line(5,y,W-5,y);doc.setLineDashPattern([],0)};
+  const txt=(v,x,y,size=9,style='normal',align='left')=>{doc.setFont('courier',style);doc.setFontSize(size);doc.setTextColor(0);doc.text(String(v),x,y,{align})};
+  const wrap=(v,x,y,max,size=8)=>{doc.setFont('courier','normal');doc.setFontSize(size);const a=doc.splitTextToSize(String(v),max);doc.text(a,x,y);return a.length*4};
+
+  doc.setFillColor(0);doc.rect(0,0,W,1.8,'F');
+  txt('ZETSU FUTSAL ACADEMY',cx,10,13,'bold','center');
+  txt('BUKTI PEMBAYARAN SPP',cx,15,8,'bold','center');
+  txt('STRUK PREMIUM • DIGITAL',cx,19,7,'normal','center');
+  line(23);
+
+  txt('PEMBAYARAN',5,29,8,'bold');
+  txt('Status',5,35,8);txt('LUNAS',W-5,35,9,'bold','right');
+  txt('Periode',5,40,8);txt(period,W-5,40,8,'bold','right');
+  txt('Tanggal',5,45,8);txt(date,W-5,45,8,'normal','right');
+  txt('Metode',5,50,8);txt(method,W-5,50,8,'normal','right');
+  dashed(54);
+
+  txt('PEMAIN',5,60,8,'bold');
+  txt('Nama',5,66,8);wrap(name,26,66,W-31,8);
+  txt('ID',5,71,8);txt(uid,W-5,71,8,'bold','right');
+  txt('No. HP',5,76,8);txt(phone,W-5,76,8,'normal','right');
+  dashed(80);
+
+  txt('TAGIHAN SPP',5,87,8,'bold');
+  txt(`SPP ${period}`,5,94,8);
+  txt(amount,W-5,94,9,'bold','right');
+  line(98);
+  txt('TOTAL',5,106,10,'bold');
+  txt(amount,W-5,106,12,'bold','right');
+  dashed(111);
+
+  let footerY=117;
+  if(notes){
+    txt('CATATAN',5,117,7,'bold');
+    const h=wrap(notes,5,122,W-10,7);
+    footerY=Math.min(135,123+h);
+  }
+  txt('TERIMA KASIH',cx,footerY+7,8,'bold','center');
+  txt('Pembayaran SPP telah diterima.',cx,footerY+12,6.5,'normal','center');
+
+  // QR besar untuk verifikasi struk, bukan QR pembayaran.
+  const qrText=`ZETSU FUTSAL ACADEMY|SPP|${uid}|${period}|${s.amount||0}|${date}`;
+  let qrDataUrl='';
+  if(window.QRCode){
+    const holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:-10000px;top:-10000px;width:320px;height:320px;background:#fff;';
+    document.body.appendChild(holder);
+    try{
+      new QRCode(holder,{text:qrText,width:320,height:320,correctLevel:QRCode.CorrectLevel.M});
+      await new Promise(r=>setTimeout(r,80));
+      const img=holder.querySelector('img');
+      const canvas=holder.querySelector('canvas');
+      qrDataUrl=img?.src||canvas?.toDataURL('image/png')||'';
+    }finally{holder.remove()}
+  }
+  if(qrDataUrl){
+    const q=46,x=(W-q)/2,y=footerY+18;
+    doc.addImage(qrDataUrl,'PNG',x,y,q,q,undefined,'FAST');
+    txt('SCAN UNTUK VERIFIKASI STRUK',cx,y+q+5,6.5,'bold','center');
+    txt('ZETSU FUTSAL ACADEMY • SPP LUNAS',cx,y+q+10,6,'normal','center');
+  }else{
+    txt('Kode verifikasi:',cx,footerY+22,6.5,'bold','center');
+    txt(uid,cx,footerY+28,7,'normal','center');
+  }
+  txt('Struk digital • simpan sebagai bukti pembayaran.',cx,H-7,5.8,'normal','center');
+  return doc;
+}
+
+function sppReceiptFileName(s){
+  return `struk_spp_${String(s.user_name||'pemain').replace(/[^a-z0-9]+/gi,'_')}_${s.month}_${s.year}.pdf`;
+}
+async function printSppReceiptByData(s){
+  try{const doc=await buildSppReceiptPdf(s);doc.save(sppReceiptFileName(s))}catch(e){Swal.fire('Gagal',e.message||'PDF gagal dibuat','error')}
+}
+function printSppReceipt(id){
+  const s=getSppReceiptData(id);
+  if(!s)return Swal.fire('Gagal','Data SPP tidak ditemukan.','error');
+  printSppReceiptByData(s);
+}
+function sppWaMessage(s){
+  const name=s.user_name||s.user?.name||'Pemain';
+  return `Halo ${name}, pembayaran SPP ZETSU FUTSAL ACADEMY untuk periode ${s.month} ${s.year} sebesar ${money(s.amount)} telah diterima dan berstatus LUNAS. Tanggal bayar: ${s.paid_date||today()}. Metode: ${s.method||'-'}. Terima kasih.`;
+}
+async function sendSppWhatsAppByData(s){
+  try{
+    if(s.status!=='Lunas')throw new Error('WhatsApp struk hanya tersedia untuk SPP Lunas.');
+    const phone=normalizeWaNumber(s.user?.phone||'');
+    const message=sppWaMessage(s);
+    const doc=buildSppReceiptPdf(s);
+    const blob=doc.output('blob');
+    const file=new File([blob],sppReceiptFileName(s),{type:'application/pdf'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],text:message});
+      return;
+    }
+    if(navigator.share){
+      await navigator.share({text:message});
+      return;
+    }
+    if(phone)window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`,'_blank');
+    else{
+      await navigator.clipboard?.writeText(message);
+      Swal.fire('Nomor HP belum ada','Struk PDF sudah dibuat. Pesan WhatsApp disalin jika browser mengizinkan.','warning');
+    }
+  }catch(e){
+    if(e?.name==='AbortError')return;
+    const phone=normalizeWaNumber(s.user?.phone||'');
+    const message=sppWaMessage(s);
+    if(phone)window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`,'_blank');
+    else Swal.fire('Gagal mengirim WA',e.message||'Tidak dapat membuka WhatsApp.','error');
+  }
+}
+function sendSppWhatsApp(id){
+  const s=getSppReceiptData(id);
+  if(!s)return Swal.fire('Gagal','Data SPP tidak ditemukan.','error');
+  sendSppWhatsAppByData(s);
+}
+
+const SPP_MONTHS_ID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function getCurrentSppPeriod(){
+  const d=new Date();
+  return {month:SPP_MONTHS_ID[d.getMonth()],year:d.getFullYear()};
+}
+function normalizeSppMonth(value){
+  const raw=String(value??'').trim();
+  if(!raw)return '';
+  const n=Number(raw);
+  if(Number.isInteger(n)&&n>=1&&n<=12)return SPP_MONTHS_ID[n-1];
+  const key=raw.toLowerCase().replace(/[^a-z]/g,'');
+  const aliases={jan:'Januari',januari:'Januari',feb:'Februari',februari:'Februari',mar:'Maret',maret:'Maret',apr:'April',april:'April',mei:'Mei',may:'Mei',jun:'Juni',juni:'Juni',jul:'Juli',juli:'Juli',aug:'Agustus',agu:'Agustus',agustus:'Agustus',sep:'September',sept:'September',september:'September',okt:'Oktober',oct:'Oktober',oktober:'Oktober',nov:'November',november:'November',des:'Desember',dec:'Desember',desember:'Desember'};
+  return aliases[key]||raw.toLowerCase().replace(/^./,c=>c.toUpperCase());
+}
+function normalizeSppStatus(value){return String(value??'').trim().toLowerCase().replace(/[_-]+/g,' ');}
+function normalizeSppUserId(value){return String(value??'').trim().toLowerCase();}
+function normalizeSppName(value){return String(value??'').trim().toLowerCase().replace(/\s+/g,' ');}
+function getSppPeriodValue(s){
+  let month=normalizeSppMonth(s?.month??s?.bulan??s?.spp_month);
+  let year=Number(s?.year??s?.tahun??s?.spp_year);
+  // Untuk pembayaran Lunas, tanggal bayar menjadi sumber periode bila tersedia.
+  // Ini juga memperbaiki data lama yang tersimpan dengan bulan default/keliru.
+  const paid=s?.paid_date||s?.payment_date;
+  if(paid){
+    const d=new Date(String(paid).slice(0,10)+'T00:00:00');
+    if(!Number.isNaN(d.getTime())){
+      const status=normalizeSppStatus(s?.status);
+      if(['lunas','paid','sudah bayar','sudah dibayar'].includes(status) || !month || !Number.isFinite(year)){
+        month=SPP_MONTHS_ID[d.getMonth()];
+        year=d.getFullYear();
+      }
+    }
+  }
+  return {month,year};
+}
+function sppRecordBelongsToUser(s,u){
+  const ids=[s?.user_id,s?.userId,s?.player_id,s?.playerId,s?.member_id,s?.memberId].map(normalizeSppUserId).filter(Boolean);
+  const uid=normalizeSppUserId(u?.id);
+  if(uid&&ids.includes(uid))return true;
+  // Fallback untuk data lama yang user_id-nya tidak sama, tetapi user_name tersimpan.
+  const names=[s?.user_name,s?.userName,s?.player_name,s?.playerName,s?.name].map(normalizeSppName).filter(Boolean);
+  return !!normalizeSppName(u?.name)&&names.includes(normalizeSppName(u?.name));
+}
+function isSppPaidFor(s,user,month,year){
+  if(!sppRecordBelongsToUser(s,user))return false;
+  const p=getSppPeriodValue(s);
+  return p.month===normalizeSppMonth(month)&&p.year===Number(year)&&['lunas','paid','sudah bayar','sudah dibayar'].includes(normalizeSppStatus(s?.status));
+}
+function getSppExpectedAmount(){
+  const amounts=state.spp.filter(s=>['lunas','paid','sudah bayar','sudah dibayar'].includes(normalizeSppStatus(s?.status))&&Number(s?.amount)>0).map(s=>Number(s.amount));
+  return amounts.length?Math.max(...amounts):Number($('sppAmount')?.value||150000);
+}
+function getPreferredSppPeriod(){
+  const cur=getCurrentSppPeriod();
+  const periods=(Array.isArray(state.spp)?state.spp:[]).map(getSppPeriodValue).filter(p=>p&&SPP_MONTHS_ID.includes(p.month)&&Number.isFinite(p.year));
+  if(periods.length){
+    periods.sort((a,b)=>a.year-b.year||SPP_MONTHS_ID.indexOf(a.month)-SPP_MONTHS_ID.indexOf(b.month));
+    return periods[periods.length-1];
+  }
+  return cur;
+}
+function initSppMonitoringFilters(){
+  const cur=getPreferredSppPeriod();
+  const monthEl=$('sppMonitorMonth'),yearEl=$('sppMonitorYear');
+  if(!monthEl||!yearEl)return;
+  const oldMonth=monthEl.value,oldYear=yearEl.value;
+  monthEl.innerHTML=SPP_MONTHS_ID.map(m=>`<option value="${esc(m)}">${m}</option>`).join('');
+  const years=new Set((Array.isArray(state.spp)?state.spp:[]).map(s=>getSppPeriodValue(s).year).filter(Number.isFinite));
+  years.add(cur.year); years.add(cur.year-1); years.add(cur.year+1);
+  yearEl.innerHTML=[...years].sort((a,b)=>b-a).map(y=>`<option value="${y}">${y}</option>`).join('');
+  if(!monthEl.dataset.ready){
+    monthEl.value=cur.month;
+    yearEl.value=cur.year;
+    monthEl.dataset.ready='1';
+  }else{
+    monthEl.value=SPP_MONTHS_ID.includes(oldMonth)?oldMonth:cur.month;
+    yearEl.value=[...years].map(String).includes(String(oldYear))?oldYear:String(cur.year);
+  }
+}
+function renderSppMonitoring(){
+  const listEl=$('sppMonitoringList');
+  if(!listEl)return;
+  initSppMonitoringFilters();
+  const month=$('sppMonitorMonth')?.value||getCurrentSppPeriod().month;
+  const year=Number($('sppMonitorYear')?.value||getCurrentSppPeriod().year);
+  const users=(Array.isArray(state.users)?state.users:[]).filter(u=>String(u.id).toLowerCase()!=='admin');
+  const spp=Array.isArray(state.spp)?state.spp:[];
+  const paidRows=spp.filter(s=>{
+    const p=getSppPeriodValue(s);
+    return p.month===normalizeSppMonth(month)&&p.year===year&&['lunas','paid','sudah bayar','sudah dibayar'].includes(normalizeSppStatus(s?.status));
+  });
+  const received=paidRows.reduce((sum,s)=>sum+(Number(s.amount)||0),0);
+  const isPaid=u=>paidRows.some(s=>isSppPaidFor(s,u,month,year));
+  const unpaid=users.filter(u=>!isPaid(u));
+  $('sppMonTotal').textContent=users.length;
+  $('sppMonPaid').textContent=users.filter(isPaid).length;
+  $('sppMonUnpaid').textContent=unpaid.length;
+  $('sppMonReceived').textContent=money(received);
+  const cur=getCurrentSppPeriod();
+  $('sppMonitorPeriodLabel').textContent=(month===cur.month&&year===cur.year)?'Bulan berjalan • otomatis dari tanggal perangkat':`Periode ${month} ${year}`;
+  if(!users.length){listEl.innerHTML='<div class="empty">Belum ada data pemain.</div>';return;}
+  listEl.innerHTML=users.map(u=>{
+    const paid=paidRows.find(s=>isSppPaidFor(s,u,month,year));
+    const phone=normalizeWaNumber(u.phone||'');
+    const expected=Number(paid?.amount)||getSppExpectedAmount();
+    const wa=phone?`<button class="btn-secondary spp-monitor-action" onclick="sendSppReminderWhatsApp('${esc(u.id)}','${esc(month)}',${year},${expected})">📲 WA</button>`:'';
+    return `<div class="notice-item spp-monitor-row" style="display:flex;align-items:center;justify-content:space-between;"><div style="min-width:0;flex:1;"><b class="spp-monitor-name">${esc(u.name||u.id)}</b><span class="spp-monitor-meta">${esc(u.id||'')} • ${esc(month)} ${year} • ${paid?money(paid.amount):money(expected)}</span></div><div style="display:flex;align-items:center;gap:4px;"><span class="badge spp-monitor-status ${paid?'success':'pending'}">${paid?'LUNAS':'BELUM'}</span>${paid?`<button class="btn-go spp-monitor-action" onclick="printSppReceipt('${esc(paid.id)}')">🧾</button>`:wa}</div></div>`;
+  }).join('');
+}
+function sendSppReminderWhatsApp(userId,month,year,amount){
+  const u=state.users.find(x=>String(x.id)===String(userId));
+  if(!u)return Swal.fire('Gagal','Data pemain tidak ditemukan.','error');
+  const phone=normalizeWaNumber(u.phone||'');
+  if(!phone)return Swal.fire('No. HP kosong','Tambahkan nomor HP pemain terlebih dahulu.','warning');
+  const text=`Halo ${u.name||'Pemain'}, kami mengingatkan pembayaran SPP ZETSU FUTSAL ACADEMY untuk periode ${month} ${year} sebesar ${money(amount)}. Status saat ini: BELUM BAYAR. Terima kasih.`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`,'_blank');
+}
+
 function resetSppForm(){document.querySelector('#tabSpp form').reset();$('editSppId').value='';$('btnCancelSpp').style.display='none'}
 async function deleteSppRecord(id){if((await Swal.fire({title:'Hapus transaksi SPP?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('spp').delete().eq('id',id);if(!r.error)reload()}}
 async function handleSaveAttendance(e){e.preventDefault();const id=$('editAttId').value,u=state.users.find(x=>String(x.id)===String($('attUserId').value)),p={user_id:u.id,user_name:u.name,date:$('attDate').value,time:$('attTime').value,status:$('attStatus').value};const r=await dbSave('attendance',p,id);if(!r.error){reload();resetAttendanceForm();Swal.fire('Sukses','Absensi tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
@@ -832,11 +677,17 @@ async function handleSaveOffice(e){e.preventDefault();const editId=$('editOffice
 function editOffice(id){const o=state.offices.find(x=>String(x.id)===String(id));$('editOfficeId').value=o.id;$('newOfficeName').value=o.name;$('newOfficeLat').value=o.lat;$('newOfficeLng').value=o.lng;$('newOfficeRadius').value=o.radius;$('newOfficeAddress').value=o.address||'';$('btnCancelOffice').style.display='block'}
 function resetOfficeForm(){document.querySelector('#tabOffices form').reset();$('editOfficeId').value='';$('btnCancelOffice').style.display='none'}
 async function deleteOffice(id){if((await Swal.fire({title:'Hapus lapangan?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('offices').delete().eq('id',id);if(!r.error)reload()}}
-async function handleSaveAnnouncement(e){e.preventDefault();const p={title:$('announcementTitle').value,body:$('announcementBody').value,priority:$('announcementPriority').value,date:$('announcementDate').value};const r=await dbSave('announcements',p,$('editAnnouncementId').value);if(!r.error){reload();e.target.reset();Swal.fire('Sukses','Pengumuman diterbitkan','success')}else Swal.fire('Gagal',r.error.message,'error')}
-function renderAcademyLists(){$('announcementAdminList').innerHTML=state.announcements.map(a=>`<div class="notice-item"><b>${esc(a.title)}</b><span>${esc(a.body)}</span><small>${a.date||''} • ${esc(a.priority||'Normal')}</small><div><button class="btn-danger" onclick="deleteAnnouncement('${esc(a.id)}')">Hapus</button></div></div>`).join('')||'<div class="empty">Belum ada pengumuman.</div>';$('notesAdminList').innerHTML=state.notes.slice(0,30).map(n=>`<div class="note-item"><b>${esc(n.user_name||n.user_id)} • ${esc(n.note_type||'Catatan')}</b><span>${esc(n.body)}</span><button class="btn-danger" onclick="deleteNote('${esc(n.id)}')">Hapus</button></div>`).join('')||'<div class="empty">Belum ada catatan.</div>';$('pointsAdminList').innerHTML=state.points.slice(0,30).map(p=>`<div class="note-item"><b>${esc(p.user_name||p.user_id)} • ${p.amount>0?'+':''}${p.amount} pts</b><span>${esc(p.reason)}</span><button class="btn-danger" onclick="deletePoint('${esc(p.id)}')">Hapus</button></div>`).join('')||'<div class="empty">Belum ada transaksi poin.</div>'}
-async function handleSaveCoachNote(e){e.preventDefault();const u=state.users.find(x=>String(x.id)===String($('noteUserId').value)),p={user_id:u.id,user_name:u.name,body:$('noteBody').value,note_type:$('noteType').value};const r=await dbSave('coach_notes',p,$('editNoteId').value);if(!r.error){reload();e.target.reset();Swal.fire('Sukses','Catatan tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
-async function handleSavePoint(e){e.preventDefault();const u=state.users.find(x=>String(x.id)===String($('pointUserId').value)),p={user_id:u.id,user_name:u.name,amount:+$('pointAmount').value,reason:$('pointReason').value};const r=await dbSave('player_points',p);if(!r.error){reload();e.target.reset();Swal.fire('Sukses','Poin tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
-async function deleteAnnouncement(id){const r=await supabaseClient.from('announcements').delete().eq('id',id);if(!r.error)reload()}async function deleteNote(id){const r=await supabaseClient.from('coach_notes').delete().eq('id',id);if(!r.error)reload()}async function deletePoint(id){const r=await supabaseClient.from('player_points').delete().eq('id',id);if(!r.error)reload()}
+async function handleSaveAnnouncement(e){e.preventDefault();const p={title:$('announcementTitle').value.trim(),body:$('announcementBody').value.trim(),priority:$('announcementPriority').value,date:$('announcementDate').value};const id=$('editAnnouncementId').value.trim();const r=await dbSave('announcements',p,id);if(!r.error){await reload();resetAnnouncementForm();Swal.fire('Sukses',id?'Pengumuman diperbarui':'Pengumuman diterbitkan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editAnnouncement(id){const a=state.announcements.find(x=>String(x.id)===String(id));if(!a)return;$('editAnnouncementId').value=a.id;$('announcementTitle').value=a.title||'';$('announcementBody').value=a.body||'';$('announcementPriority').value=a.priority||'Normal';$('announcementDate').value=a.date||today();$('btnSaveAnnouncement').textContent='💾 Perbarui Pengumuman';$('btnCancelAnnouncement').style.display='block'}
+function resetAnnouncementForm(){document.querySelector('#tabAcademy form').reset();$('editAnnouncementId').value='';$('announcementDate').value=today();$('btnSaveAnnouncement').textContent='📢 Publikasikan';$('btnCancelAnnouncement').style.display='none'}
+function renderAcademyLists(){$('announcementAdminList').innerHTML=state.announcements.map(a=>`<div class="notice-item"><b>${esc(a.title)}</b><span>${esc(a.body)}</span><small>${a.date||''} • ${esc(a.priority||'Normal')}</small><div><button class="btn-warning" onclick="editAnnouncement('${esc(a.id)}')">Edit</button> <button class="btn-danger" onclick="deleteAnnouncement('${esc(a.id)}')">Hapus</button></div></div>`).join('')||'<div class="empty">Belum ada pengumuman.</div>';$('notesAdminList').innerHTML=state.notes.slice(0,30).map(n=>`<div class="note-item"><b>${esc(n.user_name||n.user_id)} • ${esc(n.note_type||'Catatan')}</b><span>${esc(n.body)}</span><div><button class="btn-warning" onclick="editNote('${esc(n.id)}')">Edit</button> <button class="btn-danger" onclick="deleteNote('${esc(n.id)}')">Hapus</button></div></div>`).join('')||'<div class="empty">Belum ada catatan.</div>';$('pointsAdminList').innerHTML=state.points.slice(0,30).map(p=>`<div class="note-item"><b>${esc(p.user_name||p.user_id)} • ${p.amount>0?'+':''}${p.amount} pts</b><span>${esc(p.reason)}</span><div><button class="btn-warning" onclick="editPoint('${esc(p.id)}')">Edit</button> <button class="btn-danger" onclick="deletePoint('${esc(p.id)}')">Hapus</button></div></div>`).join('')||'<div class="empty">Belum ada transaksi poin.</div>'}
+async function handleSaveCoachNote(e){e.preventDefault();const u=state.users.find(x=>String(x.id)===String($('noteUserId').value));if(!u){Swal.fire('Gagal','Pilih pemain terlebih dahulu.','warning');return}const p={user_id:u.id,user_name:u.name,body:$('noteBody').value.trim(),note_type:$('noteType').value};const id=$('editNoteId').value.trim();const r=await dbSave('coach_notes',p,id);if(!r.error){await reload();resetCoachNoteForm();Swal.fire('Sukses',id?'Catatan diperbarui':'Catatan tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editNote(id){const n=state.notes.find(x=>String(x.id)===String(id));if(!n)return;$('editNoteId').value=n.id;$('noteUserId').value=n.user_id||n.userId||'';$('noteBody').value=n.body||'';$('noteType').value=n.note_type||'Catatan';$('btnSaveNote').textContent='💾 Perbarui Catatan';$('btnCancelNote').style.display='block'}
+function resetCoachNoteForm(){document.querySelector('#tabAcademy form:nth-of-type(2)').reset();$('editNoteId').value='';$('btnSaveNote').textContent='📝 Simpan Catatan';$('btnCancelNote').style.display='none'}
+async function handleSavePoint(e){e.preventDefault();const u=state.users.find(x=>String(x.id)===String($('pointUserId').value));if(!u){Swal.fire('Gagal','Pilih pemain terlebih dahulu.','warning');return}const p={user_id:u.id,user_name:u.name,amount:+$('pointAmount').value,reason:$('pointReason').value.trim()};const id=$('editPointId').value.trim();const r=await dbSave('player_points',p,id);if(!r.error){await reload();resetPointForm();Swal.fire('Sukses',id?'Poin diperbarui':'Poin tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editPoint(id){const p=state.points.find(x=>String(x.id)===String(id));if(!p)return;$('editPointId').value=p.id;$('pointUserId').value=p.user_id||p.userId||'';$('pointAmount').value=p.amount??0;$('pointReason').value=p.reason||'';$('btnSavePoint').textContent='💾 Perbarui Poin';$('btnCancelPoint').style.display='block'}
+function resetPointForm(){document.querySelector('#tabAcademy form:nth-of-type(3)').reset();$('editPointId').value='';$('btnSavePoint').textContent='🏆 Tambah Poin';$('btnCancelPoint').style.display='none'}
+async function deleteAnnouncement(id){const r=await supabaseClient.from('announcements').delete().eq('id',id);if(r.error)Swal.fire('Gagal Menghapus',r.error.message,'error');else{await reload();Swal.fire('Terhapus','Pengumuman dihapus.','success')}}async function deleteNote(id){const r=await supabaseClient.from('coach_notes').delete().eq('id',id);if(r.error)Swal.fire('Gagal Menghapus',r.error.message,'error');else{await reload();Swal.fire('Terhapus','Catatan dihapus.','success')}}async function deletePoint(id){const r=await supabaseClient.from('player_points').delete().eq('id',id);if(r.error)Swal.fire('Gagal Menghapus',r.error.message,'error');else{await reload();Swal.fire('Terhapus','Poin dihapus.','success')}}
 function previewImage(url){Swal.fire({imageUrl:url,imageAlt:'Foto Absensi',showConfirmButton:false,showCloseButton:true,background:getComputedStyle(document.documentElement).getPropertyValue('--surface'),color:getComputedStyle(document.documentElement).getPropertyValue('--text-main')})}
 async function openAttendanceModal(){
   const integrity=await checkLocationIntegrity();
@@ -845,7 +696,7 @@ async function openAttendanceModal(){
     return;
   }
   $('attendanceModal').classList.add('show');$('stepCapture').style.display='block';$('stepReview').style.display='none';$('modalTitle').textContent='Absen Presensi Latihan';
-  state.userPos=null;state.calculatedDistance=null;state.map=null;state.userMarker=null;state.officeCircle=null;state.officeLayers=[];state.cameraImageData=null;
+  state.userPos=null;state.calculatedDistance=null;state.map=null;state.userMarker=null;state.officeLayers=[];state.cameraImageData=null;
   resetCameraUI();initCameraAndMap();
 }
 function closeAttendanceModal(){$('attendanceModal').classList.remove('show');if(window.cameraStream){window.cameraStream.getTracks().forEach(t=>t.stop());window.cameraStream=null}}
@@ -999,8 +850,7 @@ function exportAllAdminDataPDF(){
 }
 
 async function reload(){await loadInitialData()}
-async function testSupabaseConnection(){try{const r=await supabaseClient.from('users').select('id').limit(1);if(r.error)console.error('SUPABASE CONNECTION:',r.error)}catch(e){console.error('SUPABASE CONNECTION:',e)}}
-window.addEventListener('DOMContentLoaded',()=>{if($('sppMonth'))$('sppMonth').innerHTML=Array.from({length:12},(_,i)=>`<option>${monthName(i)}</option>`).join('');if($('sppPaidDate'))$('sppPaidDate').value=today();if($('sppDueDate'))$('sppDueDate').value=today();if($('attDate'))$('attDate').value=today();if($('announcementDate'))$('announcementDate').value=today();loadInitialData();testSupabaseConnection()});
+window.addEventListener('DOMContentLoaded',()=>{if($('sppMonth'))$('sppMonth').innerHTML=Array.from({length:12},(_,i)=>`<option>${monthName(i)}</option>`).join('');if($('sppPaidDate'))$('sppPaidDate').value=today();if($('sppDueDate'))$('sppDueDate').value=today();if($('attDate'))$('attDate').value=today();if($('announcementDate'))$('announcementDate').value=today();loadInitialData()});
 </script>
 </body>
 </html>
