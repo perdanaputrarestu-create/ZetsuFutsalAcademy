@@ -400,6 +400,70 @@ tbody tr:hover { background: var(--surface-subtle); }
 /* ===== ACADEMY UPGRADE ===== */
 .search-row{display:flex;gap:8px;margin:10px 0}.search-row input{flex:1}.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{background:var(--surface-subtle);border:1px solid var(--border-light);border-radius:14px;padding:13px}.metric b{font-size:22px;display:block}.metric small{color:var(--text-muted)}.progress{height:8px;background:var(--surface-subtle);border-radius:99px;overflow:hidden;margin-top:8px}.progress>span{display:block;height:100%;background:var(--primary);border-radius:99px}.schedule-item,.notice-item,.note-item{padding:12px;border:1px solid var(--border-light);border-radius:14px;margin-bottom:8px;background:var(--surface-subtle)}.schedule-item b,.notice-item b,.note-item b{display:block;margin-bottom:4px}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:var(--primary-light);color:var(--primary);font-size:10px;font-weight:800}.rank-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-light)}.rank-num{width:28px;height:28px;border-radius:9px;background:var(--surface-subtle);display:grid;place-items:center;font-weight:800}.bar-row{display:grid;grid-template-columns:75px 1fr 35px;gap:8px;align-items:center;font-size:10px;margin:7px 0}.bar{height:10px;background:var(--surface-subtle);border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:var(--primary);border-radius:99px}.badge-gold{background:#FDE68A;color:#92400E}.badge-blue{background:#DBEAFE;color:#1D4ED8}.admin-tabs{display:flex;gap:6px;overflow:auto;padding:2px;margin-bottom:14px}.admin-tabs button{white-space:nowrap;background:var(--surface-subtle);color:var(--text-main);border:1px solid var(--border-light);padding:9px 11px;border-radius:12px;font-size:11px;font-weight:800}.admin-tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}.wide-table{min-width:650px}.empty{padding:18px;text-align:center;color:var(--text-muted);font-size:12px}.profile-head{display:flex;gap:12px;align-items:center}.profile-avatar{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:grid;place-items:center;color:#fff;font-size:20px;font-weight:800}.notice-item{border-left:4px solid var(--primary)}@media(min-width:700px){.mini-grid{grid-template-columns:repeat(4,1fr)}}
 </style>
+
+<style id="zetsu-desktop-fit">
+/* DESKTOP FIT: gunakan seluruh ruang layar, bukan ukuran mobile */
+@media (min-width: 900px) {
+  html, body { width:100%; min-width:100%; }
+  body { margin:0; padding:0; overflow-x:hidden; }
+  .app { width:100vw !important; max-width:none !important; min-width:0 !important; margin:0 !important; }
+  #mainApp.is-admin { width:100vw !important; max-width:none !important; padding-left:250px !important; }
+  #mainApp.is-admin .header-bg { width:100% !important; margin:0 !important; }
+  #mainApp.is-admin .content { width:100% !important; max-width:none !important; padding:0 28px 28px !important; margin-top:-26px !important; }
+  #mainApp.is-admin .content > #adminArea { width:100% !important; max-width:none !important; margin:0 !important; }
+  #mainApp.is-admin #adminArea > .card { width:100% !important; }
+
+  /* Dashboard admin melebar mengikuti area desktop */
+  #mainApp.is-admin #tabDashboard { width:100%; }
+  #mainApp.is-admin #tabDashboard > .mini-grid {
+    width:100%;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:18px;
+  }
+  #mainApp.is-admin #tabDashboard > .mini-grid .metric {
+    min-height:92px;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  #mainApp.is-admin #tabDashboard > .mini-grid .metric b { font-size:28px; }
+  #mainApp.is-admin #tabDashboard > .mini-grid .metric small { font-size:12px; }
+
+  #mainApp.is-admin #tabDashboard > .card {
+    margin-top:18px !important;
+    width:100%;
+    padding:22px !important;
+  }
+  #mainApp.is-admin #tabDashboard > .card:nth-of-type(1),
+  #mainApp.is-admin #tabDashboard > .card:nth-of-type(2) {
+    display:inline-block;
+    vertical-align:top;
+    width:calc(50% - 10px);
+  }
+  #mainApp.is-admin #tabDashboard > .card:nth-of-type(2) { margin-left:16px; }
+  #mainApp.is-admin #attendanceChart { min-height:180px; }
+  #mainApp.is-admin #adminRanking { min-height:180px; }
+
+  /* Semua halaman admin mengikuti lebar desktop */
+  #mainApp.is-admin .admin-form-card,
+  #mainApp.is-admin .table-responsive,
+  #mainApp.is-admin .search-row,
+  #mainApp.is-admin .filter-row,
+  #mainApp.is-admin #scheduleAdminList,
+  #mainApp.is-admin #announcementAdminList,
+  #mainApp.is-admin #notesAdminList,
+  #mainApp.is-admin #pointsAdminList { width:100%; }
+}
+
+@media (min-width: 1200px) {
+  #mainApp.is-admin .content { padding-left:36px !important; padding-right:36px !important; }
+  #mainApp.is-admin #tabDashboard > .mini-grid { gap:22px; }
+  #mainApp.is-admin #tabDashboard > .card:nth-of-type(1),
+  #mainApp.is-admin #tabDashboard > .card:nth-of-type(2) { width:calc(50% - 12px); }
+}
+</style>
+
 </head>
 <body>
 
