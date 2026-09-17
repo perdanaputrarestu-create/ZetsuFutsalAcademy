@@ -347,15 +347,26 @@ async function handleSaveSpp(e){
   const id=$('editSppId').value;
   const u=state.users.find(x=>String(x.id)===String($('sppUserId').value));
   if(!u)return Swal.fire('Pilih pemain','Silakan pilih pemain terlebih dahulu.','warning');
-  let month=$('sppMonth').value;
-  let year=Number($('sppYear').value);
+  // Periode SPP ditentukan oleh field Bulan + Tahun.
+  // Tanggal Bayar hanya mencatat kapan pembayaran dilakukan dan TIDAK
+  // boleh mengubah periode tagihan. Dengan begitu pemain yang sama
+  // tetap bisa memiliki SPP September, Oktober, November, dst.
+  const month=normalizeSppMonth($('sppMonth').value);
+  const year=Number($('sppYear').value);
   const status=$('sppStatusInput').value;
   const paidDate=$('sppPaidDate').value||null;
-  if(status==='Lunas' && paidDate){
-    const d=new Date(paidDate+'T00:00:00');
-    if(!Number.isNaN(d.getTime())){month=SPP_MONTHS_ID[d.getMonth()];year=d.getFullYear();$('sppMonth').value=month;$('sppYear').value=year;}
+  if(!SPP_MONTHS_ID.includes(month)||!Number.isInteger(year)||year<2000||year>2100){
+    return Swal.fire('Periode tidak valid','Silakan pilih bulan dan tahun SPP yang benar.','warning');
   }
   const p={user_id:u.id,user_name:u.name,month,year,amount:+$('sppAmount').value,status,paid_date:paidDate,method:$('sppMethod').value,due_date:$('sppDueDate').value||null,notes:$('sppNotes').value};
+  // Cek duplikat periode sebelum insert/update agar pesan lebih jelas.
+  // Database unique index tetap menjadi pengaman terakhir.
+  const duplicateQuery=supabaseClient.from('spp').select('id,user_name,month,year').eq('user_id',u.id).eq('month',month).eq('year',year);
+  const dr=id?await duplicateQuery.neq('id',id):await duplicateQuery;
+  if(dr.error)return Swal.fire('Gagal mengecek SPP',dr.error.message,'error');
+  if(Array.isArray(dr.data)&&dr.data.length){
+    return Swal.fire('SPP Sudah Ada',`SPP <b>${esc(u.name)}</b> untuk periode <b>${esc(month)} ${year}</b> sudah tercatat. Jika ingin mengubah pembayaran tersebut, gunakan tombol <b>Edit</b>.`,'warning');
+  }
   const r=await dbSave('spp',p,id);
   if(r.error)return Swal.fire('Gagal',r.error.message,'error');
 
@@ -568,16 +579,16 @@ function normalizeSppName(value){return String(value??'').trim().toLowerCase().r
 function getSppPeriodValue(s){
   let month=normalizeSppMonth(s?.month??s?.bulan??s?.spp_month);
   let year=Number(s?.year??s?.tahun??s?.spp_year);
-  // Untuk pembayaran Lunas, tanggal bayar menjadi sumber periode bila tersedia.
-  // Ini juga memperbaiki data lama yang tersimpan dengan bulan default/keliru.
-  const paid=s?.paid_date||s?.payment_date;
-  if(paid){
-    const d=new Date(String(paid).slice(0,10)+'T00:00:00');
-    if(!Number.isNaN(d.getTime())){
-      const status=normalizeSppStatus(s?.status);
-      if(['lunas','paid','sudah bayar','sudah dibayar'].includes(status) || !month || !Number.isFinite(year)){
-        month=SPP_MONTHS_ID[d.getMonth()];
-        year=d.getFullYear();
+  // Periode SPP selalu berasal dari month + year yang tersimpan.
+  // paid_date hanya menjadi fallback untuk data lama yang belum memiliki
+  // periode lengkap; tanggal bayar tidak boleh mengganti periode tagihan.
+  if(!month || !Number.isFinite(year)){
+    const paid=s?.paid_date||s?.payment_date;
+    if(paid){
+      const d=new Date(String(paid).slice(0,10)+'T00:00:00');
+      if(!Number.isNaN(d.getTime())){
+        if(!month)month=SPP_MONTHS_ID[d.getMonth()];
+        if(!Number.isFinite(year))year=d.getFullYear();
       }
     }
   }
@@ -666,7 +677,7 @@ function sendSppReminderWhatsApp(userId,month,year,amount){
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`,'_blank');
 }
 
-function resetSppForm(){document.querySelector('#tabSpp form').reset();$('editSppId').value='';$('btnCancelSpp').style.display='none'}
+function resetSppForm(){document.querySelector('#tabSpp form').reset();$('editSppId').value='';$('btnCancelSpp').style.display='none';const p=getPreferredSppPeriod();if($('sppMonth'))$('sppMonth').value=p.month;if($('sppYear'))$('sppYear').value=p.year;if($('sppAmount'))$('sppAmount').value=150000;}
 async function deleteSppRecord(id){if((await Swal.fire({title:'Hapus transaksi SPP?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('spp').delete().eq('id',id);if(!r.error)reload()}}
 async function handleSaveAttendance(e){e.preventDefault();const id=$('editAttId').value,u=state.users.find(x=>String(x.id)===String($('attUserId').value)),p={user_id:u.id,user_name:u.name,date:$('attDate').value,time:$('attTime').value,status:$('attStatus').value};const r=await dbSave('attendance',p,id);if(!r.error){reload();resetAttendanceForm();Swal.fire('Sukses','Absensi tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
 function editAttendance(id){const a=state.attendance.find(x=>String(x.id)===String(id));$('editAttId').value=a.id;$('attUserId').value=a.user_id??a.userId;$('attDate').value=a.date||today();$('attTime').value=a.time||'';$('attStatus').value=a.status;$('btnCancelAtt').style.display='block'}
