@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+<!-- ZETSU FUTSAL ACADEMY - Publishable Key Edition -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0F172A">
@@ -15,15 +16,47 @@
 <!-- External JS Libraries -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
+/* VARIABLE DEFINITION - DARK MODE (DEFAULT) */
 :root {
   --primary: #10B981;
   --primary-dark: #059669;
-  --primary-light: #ECFDF5;
+  --primary-light: rgba(16, 185, 129, 0.15);
   --accent: #F59E0B;
+  --bg-outer: #060B14;
+  --bg-app: #0F172A;
+  --surface: #1E293B;
+  --surface-subtle: #334155;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --border-light: #334155;
+  --danger: #EF4444;
+  --header-bg-start: #0F172A;
+  --header-bg-end: #1E293B;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 10px 30px -4px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --radius-xl: 24px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --th-bg: #0F172A;
+  --input-bg: #0F172A;
+  --glow-color: rgba(16, 185, 129, 0.25);
+  --bottom-nav-bg: #1E293B;
+}
+
+/* LIGHT MODE OVERRIDES */
+[data-theme="light"] {
+  --primary: #10B981;
+  --primary-dark: #059669;
+  --primary-light: #ECFDF5;
+  --accent: #D97706;
+  --bg-outer: #E2E8F0;
   --bg-app: #F8FAFC;
   --surface: #FFFFFF;
   --surface-subtle: #F1F5F9;
@@ -31,115 +64,283 @@
   --text-muted: #64748B;
   --border-light: #E2E8F0;
   --danger: #EF4444;
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 10px 30px -4px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  --radius-xl: 24px;
-  --radius-lg: 16px;
-  --radius-md: 12px;
+  --header-bg-start: #1E293B;
+  --header-bg-end: #0F172A;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.12);
+  --th-bg: #F1F5F9;
+  --input-bg: #F8FAFC;
+  --glow-color: rgba(16, 185, 129, 0.15);
+  --bottom-nav-bg: #FFFFFF;
 }
 
-* { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
-html, body { width: 100%; min-height: 100vh; background-color: #0F172A; margin: 0; padding: 0; }
+* { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
+html, body { width: 100%; min-height: 100vh; background-color: var(--bg-outer); margin: 0; padding: 0; }
 body { color: var(--text-main); display: flex; justify-content: center; align-items: flex-start; }
 button, input, select, textarea { font: inherit; outline: none; }
 button { border: 0; cursor: pointer; }
 
-.app { width: 100%; max-width: 480px; min-height: 100vh; position: relative; background: var(--bg-app); overflow-x: hidden; }
-#mainApp { padding-bottom: 40px; min-height: 100vh; }
-#appLoadingScreen { position: fixed; inset: 0; background: #0F172A; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; }
+.app { width: 100%; max-width: 500px; min-height: 100vh; position: relative; background: var(--bg-app); overflow-x: hidden; padding-bottom: 70px; }
+#mainApp { padding-bottom: 20px; min-height: 100vh; }
+#appLoadingScreen { position: fixed; inset: 0; background: var(--bg-app); color: var(--text-main); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; }
 
-.spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+.spinner { width: 40px; height: 40px; border: 4px solid var(--surface-subtle); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* LOGIN SCREEN */
-.login-screen { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; padding: 32px 24px; background: radial-gradient(circle at top, #1E293B, #0F172A); color: #fff; }
-.login-header { text-align: center; margin-bottom: 28px; }
-.login-header .logo-badge { display: inline-flex; align-items: center; justify-content: center; width: 70px; height: 70px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 20px; font-size: 36px; margin-bottom: 12px; }
-.login-header h1 { font-size: 24px; font-weight: 800; margin: 0; }
-.login-header h1 span { color: var(--primary); }
-.tagline { margin: 6px 0 0; color: #94A3B8; font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-.login-card { background: #fff; border-radius: var(--radius-xl); padding: 28px 24px; color: var(--text-main); box-shadow: var(--shadow-lg); margin-top: 12px; }
-
-/* HEADER & NAVBAR */
-.header-bg { background: linear-gradient(135deg, #0F172A, #1E293B); padding: 28px 24px 40px 24px; border-radius: 0 0 32px 32px; color: #fff; }
-.top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.brand { font-size: 18px; font-weight: 800; }
-.brand span { color: var(--primary); }
-.avatar { width: 44px; height: 44px; border-radius: 14px; background: var(--primary); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 16px; }
-
-.content { padding: 0 20px; margin-top: -24px; }
-.card { background: var(--surface); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow-md); margin-bottom: 16px; border: 1px solid var(--border-light); }
-.clock-display { font-size: 32px; font-weight: 800; color: var(--text-main); }
-
-.btn-go { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; font-weight: 700; border-radius: var(--radius-lg); padding: 14px 20px; width: 100%; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
-.btn-go:disabled { background: #94A3B8; cursor: not-allowed; }
-.btn-go:active:not(:disabled) { opacity: 0.9; transform: scale(0.98); }
-.btn-secondary { background: var(--surface-subtle); color: var(--text-main); font-weight: 700; border-radius: var(--radius-lg); padding: 12px 18px; width: 100%; font-size: 14px; }
-.btn-danger { background: var(--danger); color: #fff; font-weight: 700; padding: 6px 10px; border-radius: var(--radius-md); font-size: 11px; }
-.btn-warning { background: var(--accent); color: #fff; font-weight: 700; padding: 6px 10px; border-radius: var(--radius-md); font-size: 11px; }
-.btn-sm { font-size: 11px; padding: 6px 10px; border-radius: 6px; }
-
-.grid-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
-.stat-box { background: var(--surface); border-radius: var(--radius-lg); padding: 14px; text-align: center; border: 1px solid var(--border-light); }
-.stat-box b { font-size: 20px; font-weight: 800; display: block; color: var(--text-main); }
-.stat-box small { font-size: 11px; color: var(--text-muted); }
-
-.input-group { margin-bottom: 14px; }
-.input-group label { font-size: 12px; font-weight: 700; display: block; margin-bottom: 6px; color: var(--text-main); }
-.input-group input, .input-group select, .input-group textarea { width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-light); background: var(--surface); color: var(--text-main); }
-
-.admin-tabs { display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--border-light); margin-bottom: 16px; padding-bottom: 8px; }
-.admin-tab-btn { padding: 8px 14px; font-weight: 700; font-size: 12px; border-radius: 20px; background: var(--surface-subtle); color: var(--text-muted); white-space: nowrap; border: 0; cursor: pointer; }
-.admin-tab-btn.active { background: var(--primary); color: #fff; }
-
-.badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: var(--primary-light); color: var(--primary-dark); display: inline-block; }
-.badge.pending { background: #FEF3C7; color: #D97706; }
-.badge.danger { background: #FEE2E2; color: #DC2626; }
-.badge.success { background: #D1FAE5; color: #059669; }
-
-.modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); display: none; align-items: flex-end; justify-content: center; z-index: 200; backdrop-filter: blur(4px); }
-.modal.show { display: flex; }
-.sheet { width: min(480px, 100%); max-height: 90dvh; overflow-y: auto; background: var(--surface); border-radius: 32px 32px 0 0; padding: 24px; box-shadow: var(--shadow-lg); }
-
-.table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; }
-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-th, td { padding: 10px 8px; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
-th { font-weight: 700; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
-
-#map { width: 100%; height: 200px; border-radius: var(--radius-md); margin-top: 10px; z-index: 1; }
-#cameraPreview, #capturedPhoto { width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-md); background: #000; margin-bottom: 10px; display: none; }
-
-/* STYLE TOMBOL LOKASI TERKINI PADA LEAFLET MAP */
-.leaflet-control-locate-btn {
-  background: #ffffff;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-radius: 8px;
-  width: 34px;
-  height: 34px;
+/* MENU BURGER & DROPDOWN */
+.burger-menu-wrapper { position: relative; }
+.btn-burger {
+  background: var(--surface-subtle);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  font-size: 18px;
   box-shadow: var(--shadow-sm);
-  font-size: 16px;
-  transition: background 0.2s;
+  cursor: pointer;
 }
-.leaflet-control-locate-btn:hover {
-  background: #f4f4f4;
+.burger-dropdown {
+  display: none;
+  position: absolute;
+  top: 46px;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  min-width: 190px;
+  z-index: 100;
+  overflow: hidden;
+  padding: 6px;
 }
+.burger-dropdown.show { display: block; animation: fadeIn 0.2s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+.burger-item {
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius-md);
+}
+.burger-item:hover { background: var(--surface-subtle); }
+.burger-item.danger { color: var(--danger); }
+.burger-item.danger:hover { background: rgba(239, 68, 68, 0.15); }
+
+/* THEME TOGGLE BUTTON */
+.theme-toggle-btn {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  border-radius: 20px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+/* LOGIN SCREEN */
+.login-screen { 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  min-height: 100vh; 
+  padding: calc(24px + env(safe-area-inset-top)) 20px 24px 20px; 
+  background: radial-gradient(circle at top, var(--surface), var(--bg-app)); 
+  color: var(--text-main); 
+  position: relative;
+}
+.login-header { text-align: center; margin-bottom: 24px; }
+.login-header .logo-badge { display: inline-flex; align-items: center; justify-content: center; width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 24px; font-size: 36px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 10px 25px var(--glow-color); animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.header-img { width: 100%; height: 100%; object-fit: cover; }
+.brand-img { width: 28px; height: 28px; object-fit: cover; border-radius: 8px; vertical-align: middle; flex-shrink: 0; }
+.login-header h1 { font-size: 22px; font-weight: 800; margin: 0; color: var(--text-main); }
+.login-header h1 span { color: var(--primary); }
+.tagline { margin: 6px 0 0; color: var(--text-muted); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.login-card { background: var(--surface); border-radius: var(--radius-xl); padding: 24px 20px; color: var(--text-main); box-shadow: var(--shadow-lg); margin-top: 12px; border: 1px solid var(--border-light); backdrop-filter: blur(10px); }
+
+/* HEADER & NAVBAR */
+.header-bg { 
+  background: linear-gradient(135deg, var(--header-bg-start), var(--header-bg-end)); 
+  padding: calc(16px + env(safe-area-inset-top)) 16px 36px 16px; 
+  border-radius: 0 0 28px 28px; 
+  color: #fff; 
+  border-bottom: 1px solid var(--border-light); 
+  box-shadow: var(--shadow-md); 
+}
+.top-bar { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 10px;
+  margin-bottom: 16px; 
+  flex-wrap: nowrap;
+}
+.brand { 
+  font-size: 16px; 
+  font-weight: 800; 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  color: #fff; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brand span { color: var(--primary); }
+.header-actions {
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  flex-shrink: 0;
+}
+.avatar { width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 14px; box-shadow: 0 4px 15px var(--glow-color); flex-shrink: 0; }
+
+.content { padding: 0 16px; margin-top: -20px; }
+.card { background: var(--surface); border-radius: var(--radius-xl); padding: 18px 16px; box-shadow: var(--shadow-md); margin-bottom: 16px; border: 1px solid var(--border-light); }
+
+.clock-card {
+  background: linear-gradient(135deg, var(--surface), var(--surface-subtle));
+  position: relative;
+  overflow: hidden;
+}
+.clock-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100px;
+  height: 100px;
+  background: var(--primary);
+  opacity: 0.1;
+  border-radius: 50%;
+  filter: blur(30px);
+}
+.clock-display { font-size: 30px; font-weight: 800; color: var(--text-main); letter-spacing: -1px; }
+
+/* BUTTONS */
+.btn-go { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; font-weight: 700; border-radius: var(--radius-lg); padding: 14px 20px; width: 100%; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 6px 20px var(--glow-color); transition: all 0.2s ease; }
+.btn-go:disabled { background: var(--surface-subtle); color: var(--text-muted); cursor: not-allowed; box-shadow: none; opacity: 0.7; }
+.btn-go:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 25px var(--glow-color); }
+.btn-go:active:not(:disabled) { transform: scale(0.98); }
+.btn-secondary { background: var(--surface-subtle); color: var(--text-main); font-weight: 700; border-radius: var(--radius-lg); padding: 12px 18px; width: 100%; font-size: 14px; border: 1px solid var(--border-light); }
+.btn-secondary:hover { background: var(--border-light); }
+.btn-danger { background: var(--danger); color: #fff; font-weight: 700; padding: 6px 12px; border-radius: var(--radius-md); font-size: 11px; }
+.btn-danger:hover { background: #DC2626; }
+.btn-warning { background: var(--accent); color: #fff; font-weight: 700; padding: 6px 12px; border-radius: var(--radius-md); font-size: 11px; }
+.btn-export { background: #0284C7; color: #fff; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-md); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+.btn-export-pdf { background: #DC2626; color: #fff; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-md); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+.btn-sm { font-size: 11px; padding: 6px 10px; border-radius: 8px; }
+
+.export-container { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+
+.grid-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-box { background: var(--surface); border-radius: var(--radius-lg); padding: 12px 8px; text-align: center; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); }
+.stat-box b { font-size: 18px; font-weight: 800; display: block; color: var(--text-main); }
+.stat-box small { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+.input-group { margin-bottom: 14px; }
+.input-group label { font-size: 12px; font-weight: 700; display: block; margin-bottom: 6px; color: var(--text-muted); }
+.input-group input, .input-group select, .input-group textarea { width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-light); background: var(--input-bg); color: var(--text-main); font-size: 13px; }
+
+/* BOTTOM TAB NAVIGATION FOR ADMIN */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 500px;
+  background: var(--bottom-nav-bg);
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 4px calc(8px + env(safe-area-inset-bottom)) 4px;
+  z-index: 150;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+}
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 0;
+  border: none;
+  gap: 3px;
+}
+.bottom-nav-item .icon { font-size: 18px; }
+.bottom-nav-item.active { color: var(--primary); }
+/* Admin memakai bottom navigation sebagai satu-satunya navigasi */
+.admin-tabs { display:none !important; }
+#adminArea { padding-bottom: 90px; }
+@media (max-width:520px){ .bottom-nav{overflow-x:auto;justify-content:flex-start;gap:2px}.bottom-nav-item{min-width:64px;flex:0 0 64px;font-size:9px}.bottom-nav-item .icon{font-size:17px} }
+
+.badge { font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 20px; background: rgba(16, 185, 129, 0.2); color: #10B981; display: inline-block; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge.pending { background: rgba(245, 158, 11, 0.2); color: #F59E0B; border-color: rgba(245, 158, 11, 0.3); }
+.badge.danger { background: rgba(239, 68, 68, 0.2); color: #EF4444; border-color: rgba(239, 68, 68, 0.3); }
+.badge.success { background: rgba(16, 185, 129, 0.2); color: #10B981; border-color: rgba(16, 185, 129, 0.3); }
+
+.modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: none; align-items: flex-end; justify-content: center; z-index: 200; backdrop-filter: blur(8px); }
+.modal.show { display: flex; }
+.sheet { width: min(480px, 100%); max-height: 90dvh; overflow-y: auto; background: var(--surface); color: var(--text-main); border-radius: 28px 28px 0 0; padding: 20px; box-shadow: var(--shadow-lg); border-top: 1px solid var(--border-light); }
+
+.table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-light); -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; white-space: nowrap; }
+th, td { padding: 10px 8px; border-bottom: 1px solid var(--border-light); vertical-align: middle; color: var(--text-main); }
+th { font-weight: 700; color: var(--text-muted); font-size: 10px; text-transform: uppercase; background: var(--th-bg); }
+tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--surface-subtle); }
+
+#map { width: 100%; height: 200px; border-radius: var(--radius-md); margin-top: 10px; z-index: 1; border: 1px solid var(--border-light); }
+#cameraPreview, #cameraFallbackPreview, #capturedPhoto { width: 100%; height: 220px; object-fit: cover; border-radius: var(--radius-md); background: #000; margin-bottom: 10px; border: 1px solid var(--border-light); }
+#cameraPreview { display:block; }
 
 .action-btns { display: flex; gap: 4px; }
-.alert-box { padding: 10px 14px; border-radius: var(--radius-md); font-size: 12px; font-weight: 600; margin-bottom: 12px; display: none; }
-.alert-danger { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
-.alert-success { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
+.alert-box { padding: 10px 12px; border-radius: var(--radius-md); font-size: 12px; font-weight: 600; margin-bottom: 12px; display: none; }
+.alert-danger { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+.img-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-light); }
+
+.admin-form-card {
+  background: var(--input-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  margin-bottom: 16px;
+}
 
 @media screen and (min-width: 768px) {
-  body { padding: 30px; background: #0B1120; }
-  .app { max-width: 900px; border-radius: 24px; min-height: auto; }
+  body { padding: 30px; background: var(--bg-outer); }
+  .app { max-width: 850px; border-radius: 24px; min-height: auto; border: 1px solid var(--border-light); box-shadow: var(--shadow-lg); }
+  .bottom-nav { max-width: 850px; border-radius: 0 0 24px 24px; }
   .modal { align-items: center; }
   .sheet { border-radius: 24px; }
 }
+
+/* ===== ACADEMY UPGRADE ===== */
+.search-row{display:flex;gap:8px;margin:10px 0}.search-row input{flex:1}.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.mini-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{background:var(--surface-subtle);border:1px solid var(--border-light);border-radius:14px;padding:13px}.metric b{font-size:22px;display:block}.metric small{color:var(--text-muted)}.progress{height:8px;background:var(--surface-subtle);border-radius:99px;overflow:hidden;margin-top:8px}.progress>span{display:block;height:100%;background:var(--primary);border-radius:99px}.schedule-item,.notice-item,.note-item{padding:12px;border:1px solid var(--border-light);border-radius:14px;margin-bottom:8px;background:var(--surface-subtle)}.schedule-item b,.notice-item b,.note-item b{display:block;margin-bottom:4px}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:var(--primary-light);color:var(--primary);font-size:10px;font-weight:800}.rank-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-light)}.rank-num{width:28px;height:28px;border-radius:9px;background:var(--surface-subtle);display:grid;place-items:center;font-weight:800}.bar-row{display:grid;grid-template-columns:75px 1fr 35px;gap:8px;align-items:center;font-size:10px;margin:7px 0}.bar{height:10px;background:var(--surface-subtle);border-radius:99px;overflow:hidden}.bar span{display:block;height:100%;background:var(--primary);border-radius:99px}.badge-gold{background:#FDE68A;color:#92400E}.badge-blue{background:#DBEAFE;color:#1D4ED8}.admin-tabs{display:flex;gap:6px;overflow:auto;padding:2px;margin-bottom:14px}.admin-tabs button{white-space:nowrap;background:var(--surface-subtle);color:var(--text-main);border:1px solid var(--border-light);padding:9px 11px;border-radius:12px;font-size:11px;font-weight:800}.admin-tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}.wide-table{min-width:650px}.empty{padding:18px;text-align:center;color:var(--text-muted);font-size:12px}.profile-head{display:flex;gap:12px;align-items:center}.profile-avatar{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:grid;place-items:center;color:#fff;font-size:20px;font-weight:800}.notice-item{border-left:4px solid var(--primary)}@media(min-width:700px){.mini-grid{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
@@ -147,19 +348,27 @@ th { font-weight: 700; color: var(--text-muted); font-size: 11px; text-transform
 <div class="app">
   <div id="appLoadingScreen">
     <div class="spinner"></div>
-    <div style="font-size: 14px; font-weight: 600; color: #94A3B8;">Memuat Sesi ZETSU FUTSAL ACADEMY...</div>
+    <div style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Memuat Sesi ZETSU FUTSAL ACADEMY...</div>
   </div>
 
   <!-- HALAMAN LOGIN -->
   <div id="loginScreen" class="login-screen" style="display: none;">
+    <div style="position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 16px; z-index: 10;">
+      <button class="theme-toggle-btn" onclick="toggleTheme()">
+        <span id="loginThemeIcon">🌙</span> <span id="loginThemeText">Gelap</span>
+      </button>
+    </div>
+    
     <div class="login-header">
-      <div class="logo-badge">⚽</div>
+      <div class="logo-badge">
+        <img src="https://kvqfhifpfudzjbweyqix.supabase.co/storage/v1/object/public/attendance-photos/IMG-20260917-WA0004.jpg" alt="Logo ZETSU" class="header-img">
+      </div>
       <h1>ZETSU <span>FUTSAL ACADEMY</span></h1>
       <p class="tagline">Zero To Superior</p>
     </div>
     
     <div class="login-card">
-      <h3 style="margin: 0 0 18px; font-size: 18px; text-align: center;">Masuk Akun Pemain / Admin</h3>
+      <h3 style="margin: 0 0 16px; font-size: 16px; text-align: center; color: var(--text-main);">Masuk Akun Pemain / Admin</h3>
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="input-group">
           <label>ID Pemain / Username</label>
@@ -178,276 +387,96 @@ th { font-weight: 700; color: var(--text-muted); font-size: 11px; text-transform
   <div id="mainApp" style="display: none;">
     <div class="header-bg">
       <div class="top-bar">
-        <div class="brand">⚽ ZETSU <span>ACADEMY</span></div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <button onclick="handleLogout()" style="background: rgba(239, 68, 68, 0.2); color: #FCA5A5; padding: 6px 12px; border-radius: 12px; font-size:12px; font-weight:700;">🚪 Keluar</button>
+        <div class="brand">
+          <img src="https://kvqfhifpfudzjbweyqix.supabase.co/storage/v1/object/public/attendance-photos/IMG-20260917-WA0004.jpg" alt="Logo ZETSU" class="brand-img">
+          <span>ZETSU <span>ACADEMY</span></span>
+        </div>
+        <div class="header-actions">
           <div class="avatar" id="avatar">--</div>
+          
+          <!-- MENU BURGER DROPDOWN -->
+          <div class="burger-menu-wrapper">
+            <button class="btn-burger" onclick="toggleBurgerMenu(event)" title="Menu">☰</button>
+            <div class="burger-dropdown" id="burgerDropdown">
+              <button class="burger-item" onclick="toggleTheme()">
+                <span>Mode Tema</span>
+                <span id="burgerThemeLabel">🌙 Gelap</span>
+              </button>
+              <div style="height: 1px; background: var(--border-light); margin: 4px 0;"></div>
+              <button class="burger-item danger" onclick="handleLogout()">
+                <span>Keluar Akun</span>
+                <span>🚪</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      <div style="font-size: 13px; color: #94A3B8;">Selamat datang Pemain! 👋</div>
-      <div style="font-size: 22px; font-weight: 800;" id="displayName">Loading...</div>
+      <div style="font-size: 12px; color: #94A3B8;">Selamat datang Pemain! 👋</div>
+      <div style="font-size: 20px; font-weight: 800; color: #fff; margin-top: 2px;" id="displayName">Loading...</div>
       <div style="font-size: 11px; margin-top: 4px;" id="displayRoleBadge"><span class="badge">Role</span></div>
     </div>
 
     <div class="content">
-      <!-- HALAMAN SISWA / PEMAIN -->
+      <!-- HALAMAN PEMAIN -->
       <div id="employeeArea" style="display:none;">
-        <div class="card">
-          <div style="font-size: 12px; color: var(--text-muted);" id="date">--</div>
-          <div class="clock-display" id="clock">00:00:00</div>
-          <div style="margin-top: 8px; font-weight: 700; color: var(--primary-dark);" id="status">Siap melakukan absensi</div>
+        <div class="card profile-head">
+          <div class="profile-avatar" id="playerAvatar">ZS</div><div><b id="playerProfileName">Pemain</b><small id="playerProfileMeta" style="display:block;color:var(--text-muted);margin-top:3px;">-</small></div>
         </div>
-
-        <div class="card">
-          <small style="color:var(--text-muted); font-size:11px; font-weight:700;">LOKASI LATIHAN SAYA:</small>
-          <div id="assignedBasecampName" style="font-size:15px; font-weight:800; margin-bottom:12px; color:var(--text-main);">-</div>
-          <button class="btn-go" id="absenBtn" onclick="openAttendanceModal()">📸 Absen Hadir Latihan</button>
-        </div>
-
-        <div style="font-weight: 800; margin: 16px 0 8px; font-size:15px;">Statistik Kehadiran Latihan</div>
-        <div class="grid-stats">
-          <div class="stat-box"><b id="hadirCount">0</b><small>Hadir</small></div>
-          <div class="stat-box"><b id="terlambatCount">0</b><small>Telat</small></div>
-          <div class="stat-box"><b id="sppStatus" style="font-size:14px; margin-top:4px;">-</b><small>SPP Bulan Ini</small></div>
-        </div>
+        <div class="card clock-card"><div style="font-size:11px;color:var(--text-muted);font-weight:600;" id="date">--</div><div class="clock-display" id="clock">00:00:00</div><div style="margin-top:6px;font-weight:700;font-size:13px;color:var(--primary);" id="status">Siap melakukan absensi</div></div>
+        <div class="card"><small style="color:var(--text-muted);font-size:11px;font-weight:700;">LATIHAN BERIKUTNYA</small><div id="playerNextSchedule" class="schedule-item" style="margin-top:8px;"><b>Belum ada jadwal</b><span style="color:var(--text-muted);">Jadwal latihan akan muncul di sini.</span></div><button class="btn-go" id="absenBtn" onclick="openAttendanceModal()">📸 Absen Hadir Latihan</button></div>
+        <div class="mini-grid" style="margin-bottom:16px;"><div class="metric"><b id="hadirCount">0</b><small>Hadir</small></div><div class="metric"><b id="terlambatCount">0</b><small>Telat</small></div><div class="metric"><b id="attendancePercent">0%</b><small>Kehadiran</small></div><div class="metric"><b id="playerPoints">0</b><small>Poin</small></div></div>
+        <div class="card"><div style="font-weight:800;font-size:14px;margin-bottom:8px;">🔥 Streak Kehadiran</div><div style="font-size:24px;font-weight:800;" id="playerStreak">0x</div><div class="progress"><span id="streakProgress" style="width:0%"></span></div></div>
+        <div class="card"><div style="font-weight:800;font-size:14px;margin-bottom:10px;">💳 SPP Bulan Ini</div><div id="playerSppCard" class="schedule-item"><b>-</b></div></div>
+        <div class="card"><div style="font-weight:800;font-size:14px;margin-bottom:10px;">📢 Pengumuman Academy</div><div id="playerAnnouncements"><div class="empty">Belum ada pengumuman.</div></div></div>
+        <div class="card"><div style="font-weight:800;font-size:14px;margin-bottom:10px;">📝 Catatan Pelatih</div><div id="playerNotes"><div class="empty">Belum ada catatan.</div></div></div>
+        <div class="card"><div style="font-weight:800;font-size:14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;"><span>📸 Riwayat Absen Saya</span><small style="font-size:11px;color:var(--text-muted);" id="playerHistoryCount">0 Catatan</small></div><div class="table-responsive"><table><thead><tr><th>Foto</th><th>Waktu</th><th>Lapangan</th><th>Status</th></tr></thead><tbody id="playerAttendanceHistoryBody"></tbody></table></div></div>
       </div>
 
-      <!-- HALAMAN ADMIN MANAGEMENT -->
+      <!-- HALAMAN ADMIN -->
       <div id="adminArea" style="display:none;">
         <div class="card" style="margin-bottom:16px;">
-          <div class="admin-tabs">
-            <button class="admin-tab-btn active" id="btnTabUsers" onclick="switchAdminTab('users')">⚽ Data Pemain</button>
-            <button class="admin-tab-btn" id="btnTabSpp" onclick="switchAdminTab('spp')">💳 Pembayaran SPP</button>
-            <button class="admin-tab-btn" id="btnTabAttendance" onclick="switchAdminTab('attendance')">📋 Rekap Absensi</button>
-            <button class="admin-tab-btn" id="btnTabOffices" onclick="switchAdminTab('offices')">📍 Tikor Lapangan</button>
-          </div>
-
-          <!-- TAB DATA PEMAIN -->
-          <div id="tabUsers">
-            <h4 style="margin:0 0 12px;" id="userFormTitle">Tambah Pemain Baru ZETSU FUTSAL ACADEMY</h4>
-            <form id="addUserForm" onsubmit="handleSaveUser(event)">
-              <input type="hidden" id="editUserIndex" value="-1">
-              <div class="input-group">
-                <label>ID Pemain / NIS</label>
-                <input type="text" id="newUserId" placeholder="Contoh: ZFA-005" required>
-              </div>
-              <div class="input-group">
-                <label>Nama Lengkap Pemain</label>
-                <input type="text" id="newUserName" placeholder="Nama Pemain" required>
-              </div>
-              <div class="input-group">
-                <label>Posisi Futsal</label>
-                <select id="newUserRole">
-                  <option value="Flank">Flank</option>
-                  <option value="Anchor">Anchor</option>
-                  <option value="Pivot">Pivot</option>
-                  <option value="Goalkeeper">Goalkeeper</option>
-                  <option value="Pelatih / Official">Pelatih / Official</option>
-                </select>
-              </div>
-              <div class="input-group">
-                <label>Plotting Tikor Lapangan Utama</label>
-                <select id="newUserOffice" required></select>
-              </div>
-              <div class="input-group">
-                <label>PIN / Password</label>
-                <input type="password" id="newUserPassword" placeholder="Masukkan PIN" required>
-              </div>
-              <button class="btn-go" type="submit" id="btnSaveUser">➕ Simpan Data Pemain</button>
-              <button type="button" id="btnCancelUser" onclick="resetUserForm()" style="display:none; margin-top:8px; background:var(--surface-subtle); color:var(--text-muted);" class="btn-go">Batal Edit</button>
-            </form>
-
-            <h4 style="margin:24px 0 12px;">Daftar Pemain Registered</h4>
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID / Nama</th>
-                    <th>Posisi</th>
-                    <th>Basecamp</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="userTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- TAB SPP / BAYARAN -->
-          <div id="tabSpp" style="display: none;">
-            <h4 style="margin:0 0 8px;">Manajemen SPP Bulanan</h4>
-            <p style="font-size: 12px; color: var(--text-muted); margin-bottom:16px;">Kelola dan catat riwayat pembayaran iuran / SPP pemain ZETSU FUTSAL ACADEMY.</p>
-            
-            <form id="addSppForm" onsubmit="handleSaveSpp(event)">
-              <div class="input-group">
-                <label>Pilih Pemain</label>
-                <select id="sppUserId" required></select>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="input-group">
-                  <label>Bulan SPP</label>
-                  <select id="sppMonth">
-                    <option value="Januari">Januari</option>
-                    <option value="Februari">Februari</option>
-                    <option value="Maret">Maret</option>
-                    <option value="April">April</option>
-                    <option value="Mei">Mei</option>
-                    <option value="Juni">Juni</option>
-                    <option value="Juli">Juli</option>
-                    <option value="Agustus">Agustus</option>
-                    <option value="September">September</option>
-                    <option value="Oktober">Oktober</option>
-                    <option value="November">November</option>
-                    <option value="Desember">Desember</option>
-                  </select>
-                </div>
-                <div class="input-group">
-                  <label>Tahun</label>
-                  <input type="number" id="sppYear" value="2026" required>
-                </div>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="input-group">
-                  <label>Jumlah (Rp)</label>
-                  <input type="number" id="sppAmount" placeholder="150000" value="150000" required>
-                </div>
-                <div class="input-group">
-                  <label>Status SPP</label>
-                  <select id="sppStatusInput">
-                    <option value="Lunas">Lunas</option>
-                    <option value="Belum Lunas">Belum Lunas</option>
-                  </select>
-                </div>
-              </div>
-              <button class="btn-go" type="submit">💳 Catat SPP Bulanan</button>
-            </form>
-
-            <h4 style="margin:24px 0 12px;">Riwayat Pembayaran SPP</h4>
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Pemain</th>
-                    <th>Periode & Jumlah</th>
-                    <th>Status</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="sppTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- TAB REKAP ABSENSI -->
-          <div id="tabAttendance" style="display: none;">
-            <h4 style="margin:0 0 12px;">Kelola Presensi Latihan Realtime</h4>
-            
-            <form id="addAttendanceForm" onsubmit="handleSaveAttendance(event)" style="margin-bottom:20px;">
-              <input type="hidden" id="editAttId" value="">
-              <div class="input-group">
-                <label>Pemain</label>
-                <select id="attUserId" required></select>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="input-group">
-                  <label>Waktu Presensi</label>
-                  <input type="text" id="attTime" placeholder="16:00:00" required>
-                </div>
-                <div class="input-group">
-                  <label>Status Absen</label>
-                  <select id="attStatus">
-                    <option value="Hadir">Hadir</option>
-                    <option value="Terlambat">Terlambat</option>
-                    <option value="Izin">Izin</option>
-                    <option value="Sakit">Sakit</option>
-                    <option value="Alpa">Alpa</option>
-                  </select>
-                </div>
-              </div>
-              <button class="btn-go" type="submit" id="btnSaveAtt">➕ Tambah / Edit Absensi Manual</button>
-            </form>
-
-            <h4 style="margin:16px 0 12px;">Data Rekap Absensi</h4>
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Pemain</th>
-                    <th>Waktu</th>
-                    <th>Status</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="attendanceTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- TAB TIKOR LAPANGAN -->
-          <div id="tabOffices" style="display: none;">
-            <h4 style="margin:0 0 12px;" id="officeFormTitle">Atur Tikor / Tempat Latihan</h4>
-            <form id="addOfficeForm" onsubmit="handleSaveOffice(event)">
-              <input type="hidden" id="editOfficeId" value="">
-              <div class="input-group">
-                <label>Nama Lapangan / Tempat Latihan</label>
-                <input type="text" id="newOfficeName" placeholder="Contoh: Lapangan ZETSU Futsal Arena" required>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="input-group">
-                  <label>Latitude</label>
-                  <input type="number" step="any" id="newOfficeLat" placeholder="-6.2844" required>
-                </div>
-                <div class="input-group">
-                  <label>Longitude</label>
-                  <input type="number" step="any" id="newOfficeLng" placeholder="107.1705" required>
-                </div>
-              </div>
-              <div class="input-group">
-                <label>Radius Absen Maksimal (Meter)</label>
-                <input type="number" id="newOfficeRadius" placeholder="100" value="100" required>
-              </div>
-              <button class="btn-go" type="submit" id="btnSaveOffice">📍 Simpan Tikor Lapangan</button>
-              <button type="button" id="btnCancelOffice" onclick="resetOfficeForm()" style="display:none; margin-top:8px; background:var(--surface-subtle); color:var(--text-muted);" class="btn-go">Batal Edit</button>
-            </form>
-
-            <h4 style="margin:24px 0 12px;">Daftar Lapangan Available</h4>
-            <div class="table-responsive">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nama Lapangan</th>
-                    <th>Radius</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="officeTableBody"></tbody>
-              </table>
-            </div>
-          </div>
+          <div class="admin-tabs" aria-hidden="true"></div>
+          <div id="tabDashboard"><div class="mini-grid"><div class="metric"><b id="admTotalPlayers">0</b><small>Total Pemain</small></div><div class="metric"><b id="admTodayPresent">0</b><small>Hadir Hari Ini</small></div><div class="metric"><b id="admTodayLate">0</b><small>Terlambat</small></div><div class="metric"><b id="admUnpaid">0</b><small>SPP Belum Lunas</small></div></div><div class="card" style="margin-top:12px;margin-bottom:0;"><b>📈 Kehadiran 7 Hari</b><div id="attendanceChart" style="margin-top:10px;"></div></div><div class="card" style="margin-top:12px;margin-bottom:0;"><b>🏅 Poin & Pemain Teratas</b><div id="adminRanking"></div></div></div>
+          <div id="tabUsers" style="display:none;"><div class="admin-form-card"><h4 id="userFormTitle" style="margin:0 0 12px;font-size:13px;">➕ Tambah Pemain</h4><form id="addUserForm" onsubmit="handleSaveUser(event)"><input type="hidden" id="editUserIndex" value="-1"><div class="input-group"><label>ID Pemain / NIS</label><input type="text" id="newUserId" required></div><div class="input-group"><label>Nama Lengkap</label><input type="text" id="newUserName" required></div><div class="input-group"><label>Posisi / Peran</label><select id="newUserRole"><option>Flank</option><option>Anchor</option><option>Pivot</option><option>Goalkeeper</option><option>Pelatih / Official</option></select></div><div class="input-group"><label>Lapangan Utama</label><select id="newUserOffice" required></select></div><div class="input-group"><label>No. HP</label><input type="text" id="newUserPhone" placeholder="08xxxxxxxxxx"></div><div class="input-group"><label>PIN / Password</label><input type="password" id="newUserPassword" required></div><button class="btn-go" type="submit" id="btnSaveUser">💾 Simpan Pemain</button><button type="button" id="btnCancelUser" onclick="resetUserForm()" style="display:none;margin-top:8px;" class="btn-secondary">Batal Edit</button></form></div><div class="search-row"><input id="userSearch" oninput="renderAdminTables()" placeholder="🔍 Cari nama / ID pemain..."></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Pemain</th><th>Posisi</th><th>Basecamp</th><th>SPP</th><th>Aksi</th></tr></thead><tbody id="userTableBody"></tbody></table></div></div>
+          <div id="tabSchedules" style="display:none;"><div class="admin-form-card"><h4 id="scheduleFormTitle" style="margin:0 0 12px;font-size:13px;">🗓️ Tambah Jadwal Latihan</h4><form onsubmit="handleSaveSchedule(event)"><input type="hidden" id="editScheduleId"><div class="input-group"><label>Judul</label><input id="scheduleTitle" placeholder="Latihan Reguler" required></div><div class="filter-row"><div class="input-group"><label>Tanggal</label><input type="date" id="scheduleDate" required></div><div class="input-group"><label>Jam</label><input type="time" id="scheduleTime" required></div></div><div class="filter-row"><div class="input-group"><label>Lapangan</label><select id="scheduleOffice" required></select></div><div class="input-group"><label>Kelompok</label><input id="scheduleGroup" placeholder="U-17 / Semua"></div></div><div class="input-group"><label>Pelatih</label><input id="scheduleCoach" placeholder="Nama pelatih"></div><button class="btn-go">💾 Simpan Jadwal</button><button type="button" class="btn-secondary" id="btnCancelSchedule" onclick="resetScheduleForm()" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div id="scheduleAdminList"></div></div>
+          <div id="tabSpp" style="display:none;"><div class="admin-form-card"><h4 id="sppFormTitle" style="margin:0 0 12px;font-size:13px;">💳 Catat Pembayaran SPP</h4><form onsubmit="handleSaveSpp(event)"><input type="hidden" id="editSppId"><div class="input-group"><label>Pemain</label><select id="sppUserId" required></select></div><div class="filter-row"><div class="input-group"><label>Bulan</label><select id="sppMonth"></select></div><div class="input-group"><label>Tahun</label><input type="number" id="sppYear" value="2026" required></div></div><div class="filter-row"><div class="input-group"><label>Jumlah</label><input type="number" id="sppAmount" value="150000" required></div><div class="input-group"><label>Status</label><select id="sppStatusInput"><option>Lunas</option><option>Belum Lunas</option></select></div></div><div class="filter-row"><div class="input-group"><label>Tanggal Bayar</label><input type="date" id="sppPaidDate"></div><div class="input-group"><label>Metode</label><select id="sppMethod"><option>Transfer</option><option>Tunai</option><option>QRIS</option><option>Lainnya</option></select></div></div><div class="input-group"><label>Jatuh Tempo</label><input type="date" id="sppDueDate"></div><div class="input-group"><label>Catatan</label><textarea id="sppNotes" rows="2" placeholder="Opsional"></textarea></div><button class="btn-go">💾 Simpan SPP</button><button type="button" id="btnCancelSpp" onclick="resetSppForm()" class="btn-secondary" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div class="filter-row"><select id="sppFilterStatus" onchange="renderAdminTables()"><option value="">Semua Status</option><option>Lunas</option><option>Belum Lunas</option></select><select id="sppFilterYear" onchange="renderAdminTables()"><option value="">Semua Tahun</option></select></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Pemain</th><th>Periode</th><th>Jumlah</th><th>Status</th><th>Bayar</th><th>Aksi</th></tr></thead><tbody id="sppTableBody"></tbody></table></div></div>
+          <div id="tabAttendance" style="display:none;"><div class="admin-form-card"><h4 id="attFormTitle" style="margin:0 0 12px;font-size:13px;">📋 Input / Edit Absensi Manual</h4><form onsubmit="handleSaveAttendance(event)"><input type="hidden" id="editAttId"><div class="input-group"><label>Pemain</label><select id="attUserId" required></select></div><div class="filter-row"><div class="input-group"><label>Tanggal</label><input type="date" id="attDate" required></div><div class="input-group"><label>Waktu</label><input type="time" id="attTime" required></div></div><div class="input-group"><label>Status</label><select id="attStatus"><option>Hadir</option><option>Terlambat</option><option>Izin</option><option>Sakit</option><option>Alpa</option></select></div><button class="btn-go">💾 Simpan Absensi</button><button type="button" id="btnCancelAtt" onclick="resetAttendanceForm()" class="btn-secondary" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div class="filter-row"><input type="date" id="attFilterDate" onchange="renderAdminTables()"><select id="attFilterStatus" onchange="renderAdminTables()"><option value="">Semua Status</option><option>Hadir</option><option>Terlambat</option><option>Izin</option><option>Sakit</option><option>Alpa</option></select></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Foto</th><th>Pemain</th><th>Tanggal/Jam</th><th>Status</th><th>Jarak</th><th>Aksi</th></tr></thead><tbody id="attendanceTableBody"></tbody></table></div></div>
+          <div id="tabOffices" style="display:none;"><div class="admin-form-card"><h4 id="officeFormTitle" style="margin:0 0 12px;font-size:13px;">📍 Atur Tikor / Tempat Latihan</h4><form onsubmit="handleSaveOffice(event)"><input type="hidden" id="editOfficeId"><div class="input-group"><label>Nama Lapangan</label><input id="newOfficeName" required></div><div class="filter-row"><div class="input-group"><label>Latitude</label><input type="number" step="any" id="newOfficeLat" required></div><div class="input-group"><label>Longitude</label><input type="number" step="any" id="newOfficeLng" required></div></div><div class="filter-row"><div class="input-group"><label>Radius Meter</label><input type="number" id="newOfficeRadius" value="100" required></div><div class="input-group"><label>Alamat</label><input id="newOfficeAddress" placeholder="Alamat lapangan"></div></div><button class="btn-go">📍 Simpan Lapangan</button><button type="button" id="btnCancelOffice" onclick="resetOfficeForm()" class="btn-secondary" style="display:none;margin-top:8px;">Batal Edit</button></form></div><div class="table-responsive"><table class="wide-table"><thead><tr><th>Lapangan</th><th>Koordinat</th><th>Radius</th><th>Aksi</th></tr></thead><tbody id="officeTableBody"></tbody></table></div></div>
+          <div id="tabAcademy" style="display:none;"><div class="admin-form-card"><h4>📢 Pengumuman</h4><form onsubmit="handleSaveAnnouncement(event)"><input type="hidden" id="editAnnouncementId"><div class="input-group"><label>Judul</label><input id="announcementTitle" required></div><div class="input-group"><label>Isi</label><textarea id="announcementBody" rows="3" required></textarea></div><div class="filter-row"><div class="input-group"><label>Prioritas</label><select id="announcementPriority"><option>Normal</option><option>Penting</option></select></div><div class="input-group"><label>Tanggal</label><input type="date" id="announcementDate" required></div></div><button class="btn-go">📢 Publikasikan</button></form></div><div id="announcementAdminList"></div><div class="admin-form-card"><h4>📝 Catatan Pelatih</h4><form onsubmit="handleSaveCoachNote(event)"><input type="hidden" id="editNoteId"><div class="input-group"><label>Pemain</label><select id="noteUserId" required></select></div><div class="input-group"><label>Catatan</label><textarea id="noteBody" rows="3" required placeholder="Perkembangan, evaluasi, arahan..."></textarea></div><div class="input-group"><label>Jenis</label><select id="noteType"><option>Perkembangan</option><option>Evaluasi</option><option>Catatan</option></select></div><button class="btn-go">📝 Simpan Catatan</button></form></div><div id="notesAdminList"></div><div class="admin-form-card"><h4>🏆 Poin Pemain</h4><form onsubmit="handleSavePoint(event)"><div class="filter-row"><div class="input-group"><label>Pemain</label><select id="pointUserId" required></select></div><div class="input-group"><label>Poin (+/-)</label><input type="number" id="pointAmount" required></div></div><div class="input-group"><label>Alasan</label><input id="pointReason" required placeholder="Hadir latihan / disiplin / prestasi"></div><button class="btn-go">🏆 Tambah Poin</button></form></div><div id="pointsAdminList"></div></div>
         </div>
       </div>
-    </div>
+    <!-- NAV ADMIN -->
+    <div class="bottom-nav" id="adminBottomNav" style="display:none;"><button class="bottom-nav-item active" onclick="switchAdminTab('dashboard')"><span class="icon">📊</span><span>Home</span></button><button class="bottom-nav-item" onclick="switchAdminTab('users')"><span class="icon">⚽</span><span>Pemain</span></button><button class="bottom-nav-item" onclick="switchAdminTab('schedules')"><span class="icon">🗓️</span><span>Jadwal</span></button><button class="bottom-nav-item" onclick="switchAdminTab('spp')"><span class="icon">💳</span><span>SPP</span></button><button class="bottom-nav-item" onclick="switchAdminTab('attendance')"><span class="icon">📋</span><span>Absen</span></button><button class="bottom-nav-item" onclick="switchAdminTab('offices')"><span class="icon">📍</span><span>Lapangan</span></button><button class="bottom-nav-item" onclick="switchAdminTab('academy')"><span class="icon">🏆</span><span>Academy</span></button></div>
   </div>
 </div>
 
-<!-- MODAL ABSENSI & TINJAUAN -->
+<!-- MODAL ABSENSI & TINJAUAN PEMAIN -->
 <div class="modal" id="attendanceModal">
   <div class="sheet">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h3 style="margin:0; font-size:18px;" id="modalTitle">Absen Presensi Latihan</h3>
+      <h3 style="margin:0; font-size:16px; color:var(--text-main);" id="modalTitle">Absen Presensi Latihan</h3>
       <button onclick="closeAttendanceModal()" style="background:none; font-size:20px; font-weight:800; color:var(--text-muted);">✕</button>
     </div>
 
     <!-- TAMPILAN STEP 1: AMBIL LOKASI & FOTO -->
     <div id="stepCapture">
-      <video id="cameraPreview" autoplay playsinline></video>
+      <div id="cameraBox" style="position:relative;background:#000;border-radius:var(--radius-md);overflow:hidden;margin-bottom:10px;min-height:220px;">
+        <video id="cameraPreview" autoplay muted playsinline></video>
+        <img id="cameraFallbackPreview" alt="Pratinjau kamera" style="display:none;width:100%;height:220px;object-fit:cover;">
+        <div id="cameraStatus" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;color:#fff;background:rgba(0,0,0,.55);font-size:13px;">📷 Menyiapkan kamera...</div>
+      </div>
+      <input id="cameraFallbackInput" type="file" accept="image/*" capture="user" style="display:none;">
+      <div id="cameraFallbackActions" style="display:none;margin-bottom:10px;">
+        <button type="button" class="btn-go" onclick="openNativeCamera()">📷 Buka Kamera HP</button>
+        <small style="display:block;color:var(--text-muted);text-align:center;margin-top:6px;">Mode cadangan untuk browser/file lokal.</small>
+      </div>
       <div id="map"></div>
       
       <div id="distanceAlert" class="alert-box alert-danger">
         ⚠️ Anda masih jauh dari lokasi lapangan! Silakan mendekat atau geser marker peta jika GPS Anda mental.
       </div>
 
-      <div style="font-size:12px; margin:10px 0; color:var(--text-muted);" id="geoStatus">
+      <div style="font-size:11px; margin:10px 0; color:var(--text-muted);" id="geoStatus">
         Mendapatkan koordinat GPS...
       </div>
       
@@ -462,19 +491,19 @@ th { font-weight: 700; color: var(--text-muted); font-size: 11px; text-transform
 
     <!-- TAMPILAN STEP 2: PRATINJAU DULU SEBELUM DIKIRIM -->
     <div id="stepReview" style="display: none; text-align: left;">
-      <div style="background: var(--surface-subtle); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 14px;">
+      <div style="background: var(--surface-subtle); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 14px; border: 1px solid var(--border-light);">
         <img id="capturedPhoto" alt="Foto Absen" style="display:block;">
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
           <span style="font-size:12px; color:var(--text-muted);">Lokasi Lapangan:</span>
-          <b style="font-size:12px;" id="reviewOfficeName">-</b>
+          <b style="font-size:12px; color:var(--text-main);" id="reviewOfficeName">-</b>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
           <span style="font-size:12px; color:var(--text-muted);">Jarak dari Tikor:</span>
-          <b style="font-size:12px;" id="reviewDistance">-</b>
+          <b style="font-size:12px; color:var(--text-main);" id="reviewDistance">-</b>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
           <span style="font-size:12px; color:var(--text-muted);">Waktu Presensi:</span>
-          <b style="font-size:12px;" id="reviewTime">-</b>
+          <b style="font-size:12px; color:var(--text-main);" id="reviewTime">-</b>
         </div>
         <div style="display:flex; justify-content:space-between;">
           <span style="font-size:12px; color:var(--text-muted);">Status Kehadiran:</span>
@@ -482,7 +511,7 @@ th { font-weight: 700; color: var(--text-muted); font-size: 11px; text-transform
         </div>
       </div>
 
-      <div style="display: flex; gap: 10px;">
+      <div style="display: flex; gap: 8px;">
         <button class="btn-secondary" style="flex:1;" onclick="backToCapture()">🔄 Foto Ulang</button>
         <button class="btn-go" style="flex:2;" id="btnSubmitFinal" onclick="submitAttendance()">🚀 Kirim Absen Now</button>
       </div>
@@ -491,647 +520,83 @@ th { font-weight: 700; color: var(--text-muted); font-size: 11px; text-transform
 </div>
 
 <script>
-// INITIALIZATION SUPABASE CLIENT
-const SUPABASE_URL = "https://kvqfhifpfudzjbweyqix.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2cWZoaWZwZnVkempid2V5cWl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2MjE0ODMsImV4cCI6MjEwNTE5NzQ4M30.9Mti2mfYFevNqFl58pYIq_RjBXMBEN9nCXBR0Tkd3O0";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// STATE MANAGEMENT
-let state = {
-  currentUserId: localStorage.getItem("zetsu_user") || null,
-  users: [],
-  offices: [],
-  attendance: [],
-  spp: [],
-  userPos: null,
-  calculatedDistance: null,
-  map: null,
-  userMarker: null,
-  officeCircle: null,
-  currentStatus: "Hadir"
-};
-
-const $ = id => document.getElementById(id);
-
-// HAVERSINE DISTANCE CALCULATION (Meter)
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371e3;
-  const φ1 = lat1 * Math.PI/180;
-  const φ2 = lat2 * Math.PI/180;
-  const Δφ = (lat2-lat1) * Math.PI/180;
-  const Δλ = (lon2-lon1) * Math.PI/180;
-
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-          Math.cos(φ1) * Math.cos(φ2) *
-          Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  return Math.round(R * c);
-}
-
-// LOAD INITIAL DATA FROM SUPABASE
-async function loadInitialData() {
-  try {
-    const { data: offices } = await supabaseClient.from('offices').select('*');
-    state.offices = offices || [];
-
-    const { data: users } = await supabaseClient.from('users').select('*');
-    state.users = (users || []).map(u => ({
-      id: u.id,
-      name: u.name,
-      role: u.role,
-      officeId: u.office_id,
-      pin: u.pin,
-      sppStatus: u.spp_status || "Belum Lunas"
-    }));
-
-    const { data: attendance } = await supabaseClient.from('attendance').select('*').order('id', { ascending: false });
-    state.attendance = (attendance || []).map(a => ({
-      id: a.id,
-      userId: a.user_id,
-      userName: a.user_name,
-      time: a.time,
-      status: a.status,
-      distance: a.distance || 0
-    }));
-
-    const { data: sppData } = await supabaseClient.from('spp').select('*').order('id', { ascending: false });
-    state.spp = (sppData || []).map(s => ({
-      id: s.id,
-      userId: s.user_id,
-      userName: s.user_name,
-      month: s.month,
-      year: s.year,
-      amount: s.amount,
-      status: s.status
-    }));
-
-  } catch (err) {
-    console.error("Error loading data:", err);
-  } finally {
-    if($("appLoadingScreen")) $("appLoadingScreen").style.display = "none";
-    renderApp();
-  }
-}
-
-async function handleLogin(e) {
-  e.preventDefault();
-  const u = $("inputUsername").value.trim();
-  const p = $("inputPassword").value.trim();
-
-  const foundUser = state.users.find(user => user.id.toLowerCase() === u.toLowerCase() && user.pin === p);
-
-  if (foundUser) {
-    state.currentUserId = foundUser.id;
-    localStorage.setItem("zetsu_user", foundUser.id);
-    Swal.fire({ icon: 'success', title: 'Berhasil Masuk!', text: `Selamat Datang, ${foundUser.name}`, timer: 1500, showConfirmButton: false });
-    renderApp();
-  } else {
-    Swal.fire({ icon: 'error', title: 'Gagal Masuk', text: 'ID Pemain / Password salah!' });
-  }
-}
-
-function handleLogout() {
-  localStorage.removeItem("zetsu_user");
-  state.currentUserId = null;
-  renderApp();
-}
-
-function renderApp() {
-  if (!state.currentUserId) {
-    $("loginScreen").style.display = "flex";
-    $("mainApp").style.display = "none";
-    return;
-  }
-  
-  const currentUser = state.users.find(u => u.id === state.currentUserId) || { id: state.currentUserId, name: state.currentUserId, role: 'Pemain' };
-
-  $("loginScreen").style.display = "none";
-  $("mainApp").style.display = "block";
-  $("displayName").textContent = currentUser.name;
-  $("avatar").textContent = currentUser.name.substring(0, 2).toUpperCase();
-  $("displayRoleBadge").innerHTML = `<span class="badge">${currentUser.role || 'Pemain'}</span>`;
-  
-  if(currentUser.id === "admin" || (currentUser.role && currentUser.role.includes("Pelatih"))) {
-    $("adminArea").style.display = "block";
-    $("employeeArea").style.display = "none";
-    renderAdminTables();
-  } else {
-    $("adminArea").style.display = "none";
-    $("employeeArea").style.display = "block";
-    renderEmployeeDashboard(currentUser);
-  }
-}
-
-function renderEmployeeDashboard(user) {
-  const office = state.offices.find(o => o.id === user.officeId) || state.offices[0] || { name: 'Belum Diplot' };
-  $("assignedBasecampName").textContent = office.name;
-  
-  const userLogs = state.attendance.filter(a => a.userId === user.id);
-  $("hadirCount").textContent = userLogs.filter(a => a.status === "Hadir").length;
-  $("terlambatCount").textContent = userLogs.filter(a => a.status === "Terlambat").length;
-  
-  const sppElem = $("sppStatus");
-  if(user.sppStatus === "Lunas") {
-    sppElem.textContent = "Lunas";
-    sppElem.style.color = "#059669";
-  } else {
-    sppElem.textContent = "Belum Bayar";
-    sppElem.style.color = "#DC2626";
-  }
-}
-
-function switchAdminTab(tab) {
-  ["Users", "Spp", "Attendance", "Offices"].forEach(t => {
-    $("tab" + t).style.display = "none";
-    $("btnTab" + t).classList.remove("active");
-  });
-  $("tab" + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = "block";
-  $("btnTab" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
-}
-
-function renderAdminTables() {
-  const officeSelect = $("newUserOffice");
-  officeSelect.innerHTML = state.offices.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-
-  const userOptions = state.users.filter(u => u.id !== 'admin').map(u => `<option value="${u.id}">${u.name} (${u.id})</option>`).join('');
-  if ($("sppUserId")) $("sppUserId").innerHTML = userOptions;
-  if ($("attUserId")) $("attUserId").innerHTML = userOptions;
-
-  $("userTableBody").innerHTML = state.users.map(u => `
-    <tr>
-      <td><b>${u.name}</b><br><small style="color:var(--text-muted)">${u.id}</small></td>
-      <td><span class="badge">${u.role}</span></td>
-      <td>${(state.offices.find(o => o.id === u.officeId) || {}).name || '-'}</td>
-      <td>
-        <div class="action-btns">
-          <button class="btn-warning" onclick="editUser('${u.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteUser('${u.id}')">Hapus</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-
-  $("sppTableBody").innerHTML = state.spp.length ? state.spp.map(s => `
-    <tr>
-      <td><b>${s.userName || s.userId}</b><br><small style="color:var(--text-muted)">ID: ${s.userId}</small></td>
-      <td><b>${s.month} ${s.year}</b><br><small style="color:var(--text-muted)">Rp ${(s.amount || 0).toLocaleString('id-ID')}</small></td>
-      <td><span class="badge ${s.status === 'Lunas' ? 'success' : 'danger'}">${s.status}</span></td>
-      <td>
-        <div class="action-btns">
-          <button class="btn-sm btn-warning" onclick="toggleSppStatus('${s.id}')">Ubah Status</button>
-          <button class="btn-sm btn-danger" onclick="deleteSppRecord('${s.id}')">Hapus</button>
-        </div>
-      </td>
-    </tr>
-  `).join('') : '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Belum ada catatan SPP.</td></tr>';
-
-  $("attendanceTableBody").innerHTML = state.attendance.length ? state.attendance.map(a => `
-    <tr>
-      <td><b>${a.userName}</b><br><small style="color:var(--text-muted)">ID: ${a.userId}</small></td>
-      <td>${a.time}</td>
-      <td><span class="badge ${a.status === 'Hadir' ? 'success' : a.status === 'Terlambat' ? 'pending' : 'danger'}">${a.status}</span></td>
-      <td>
-        <div class="action-btns">
-          <button class="btn-warning" onclick="editAttendance('${a.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteAttendance('${a.id}')">Hapus</button>
-        </div>
-      </td>
-    </tr>
-  `).join('') : '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Belum ada rekap presensi</td></tr>';
-
-  $("officeTableBody").innerHTML = state.offices.map(o => `
-    <tr>
-      <td><b>${o.name}</b><br><small style="color:var(--text-muted)">Lat: ${o.lat}, Lng: ${o.lng}</small></td>
-      <td>${o.radius}m</td>
-      <td>
-        <div class="action-btns">
-          <button class="btn-warning" onclick="editOffice('${o.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteOffice('${o.id}')">Hapus</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// CRUD OPERASIONAL ADMIN
-async function handleSaveUser(e) {
-  e.preventDefault();
-  const editIndex = parseInt($("editUserIndex").value);
-  const id = $("newUserId").value.trim();
-  const name = $("newUserName").value.trim();
-  const role = $("newUserRole").value;
-  const officeId = $("newUserOffice").value;
-  const pin = $("newUserPassword").value.trim();
-
-  if (editIndex >= 0) {
-    const targetId = state.users[editIndex].id;
-    const { error } = await supabaseClient.from('users').update({ name, role, office_id: officeId, pin }).eq('id', targetId);
-    if (!error) {
-      state.users[editIndex] = { ...state.users[editIndex], name, role, officeId, pin };
-      Swal.fire('Sukses', 'Data pemain berhasil diperbarui!', 'success');
-      resetUserForm();
-      renderAdminTables();
-    }
-  } else {
-    const newUserObj = { id, name, role, office_id: officeId, pin, spp_status: "Belum Lunas" };
-    const { error } = await supabaseClient.from('users').insert([newUserObj]);
-    if (!error) {
-      state.users.push({ id, name, role, officeId, pin, sppStatus: "Belum Lunas" });
-      Swal.fire('Sukses', 'Data pemain ditambahkan!', 'success');
-      resetUserForm();
-      renderAdminTables();
-    }
-  }
-}
-
-function editUser(id) {
-  const index = state.users.findIndex(u => u.id === id);
-  if (index === -1) return;
-  const user = state.users[index];
-
-  $("editUserIndex").value = index;
-  $("newUserId").value = user.id;
-  $("newUserId").disabled = true;
-  $("newUserName").value = user.name;
-  $("newUserRole").value = user.role;
-  $("newUserOffice").value = user.officeId;
-  $("newUserPassword").value = user.pin;
-
-  $("userFormTitle").textContent = "Edit Data Pemain (" + user.id + ")";
-  $("btnSaveUser").textContent = "💾 Perbarui Data Pemain";
-  $("btnCancelUser").style.display = "block";
-}
-
-function resetUserForm() {
-  $("editUserIndex").value = "-1";
-  $("addUserForm").reset();
-  $("newUserId").disabled = false;
-  $("userFormTitle").textContent = "Tambah Pemain Baru ZETSU FUTSAL ACADEMY";
-  $("btnSaveUser").textContent = "➕ Simpan Data Pemain";
-  $("btnCancelUser").style.display = "none";
-}
-
-async function deleteUser(id) {
-  if (confirm("Yakin hapus pemain ini?")) {
-    await supabaseClient.from('users').delete().eq('id', id);
-    state.users = state.users.filter(u => u.id !== id);
-    renderAdminTables();
-  }
-}
-
-async function handleSaveSpp(e) {
-  e.preventDefault();
-  const userId = $("sppUserId").value;
-  const targetUser = state.users.find(u => u.id === userId);
-  const userName = targetUser ? targetUser.name : userId;
-  const month = $("sppMonth").value;
-  const year = parseInt($("sppYear").value);
-  const amount = parseInt($("sppAmount").value);
-  const status = $("sppStatusInput").value;
-
-  const sppObj = { user_id: userId, user_name: userName, month, year, amount, status };
-
-  const { data } = await supabaseClient.from('spp').insert([sppObj]).select();
-  state.spp.unshift({ id: (data && data[0]) ? data[0].id : 'spp-' + Date.now(), userId, userName, month, year, amount, status });
-  
-  if (targetUser) {
-    targetUser.sppStatus = status;
-    await supabaseClient.from('users').update({ spp_status: status }).eq('id', userId);
-  }
-
-  Swal.fire('Sukses', 'Catatan SPP bulanan disimpan!', 'success');
-  renderAdminTables();
-}
-
-async function toggleSppStatus(sppId) {
-  const sppItem = state.spp.find(s => s.id === sppId);
-  if (!sppItem) return;
-
-  const nextStatus = sppItem.status === "Lunas" ? "Belum Lunas" : "Lunas";
-  sppItem.status = nextStatus;
-
-  await supabaseClient.from('spp').update({ status: nextStatus }).eq('id', sppId);
-  const targetUser = state.users.find(u => u.id === sppItem.userId);
-  if (targetUser) {
-    targetUser.sppStatus = nextStatus;
-    await supabaseClient.from('users').update({ spp_status: nextStatus }).eq('id', sppItem.userId);
-  }
-  renderAdminTables();
-}
-
-async function deleteSppRecord(sppId) {
-  if (confirm("Hapus catatan SPP ini?")) {
-    await supabaseClient.from('spp').delete().eq('id', sppId);
-    state.spp = state.spp.filter(s => s.id !== sppId);
-    renderAdminTables();
-  }
-}
-
-async function handleSaveAttendance(e) {
-  e.preventDefault();
-  const attId = $("editAttId").value;
-  const userId = $("attUserId").value;
-  const user = state.users.find(u => u.id === userId);
-  const userName = user ? user.name : userId;
-  const time = $("attTime").value;
-  const status = $("attStatus").value;
-
-  if (attId) {
-    await supabaseClient.from('attendance').update({ user_id: userId, user_name: userName, time, status }).eq('id', attId);
-    const index = state.attendance.findIndex(a => a.id == attId);
-    if (index !== -1) state.attendance[index] = { ...state.attendance[index], userId, userName, time, status };
-  } else {
-    const attObj = { user_id: userId, user_name: userName, time, status, distance: 0 };
-    const { data } = await supabaseClient.from('attendance').insert([attObj]).select();
-    state.attendance.unshift({ id: (data && data[0]) ? data[0].id : 'att-' + Date.now(), userId, userName, time, status, distance: 0 });
-  }
-
-  $("addAttendanceForm").reset();
-  $("editAttId").value = "";
-  renderAdminTables();
-}
-
-function editAttendance(attId) {
-  const att = state.attendance.find(a => a.id == attId);
-  if (!att) return;
-  $("editAttId").value = att.id;
-  $("attUserId").value = att.userId;
-  $("attTime").value = att.time;
-  $("attStatus").value = att.status;
-  $("btnSaveAtt").textContent = "💾 Simpan Perubahan Absensi";
-}
-
-async function deleteAttendance(attId) {
-  if (confirm("Hapus absensi ini?")) {
-    await supabaseClient.from('attendance').delete().eq('id', attId);
-    state.attendance = state.attendance.filter(a => a.id != attId);
-    renderAdminTables();
-  }
-}
-
-async function handleSaveOffice(e) {
-  e.preventDefault();
-  const editId = $("editOfficeId").value;
-  const name = $("newOfficeName").value.trim();
-  const lat = parseFloat($("newOfficeLat").value);
-  const lng = parseFloat($("newOfficeLng").value);
-  const radius = parseInt($("newOfficeRadius").value);
-
-  if (editId) {
-    await supabaseClient.from('offices').update({ name, lat, lng, radius }).eq('id', editId);
-    const idx = state.offices.findIndex(o => o.id === editId);
-    if (idx !== -1) state.offices[idx] = { id: editId, name, lat, lng, radius };
-  } else {
-    const newId = 'off-' + Date.now();
-    const newOfficeObj = { id: newId, name, lat, lng, radius };
-    await supabaseClient.from('offices').insert([newOfficeObj]);
-    state.offices.push(newOfficeObj);
-  }
-  resetOfficeForm();
-  renderAdminTables();
-}
-
-function editOffice(id) {
-  const office = state.offices.find(o => o.id === id);
-  if (!office) return;
-  $("editOfficeId").value = office.id;
-  $("newOfficeName").value = office.name;
-  $("newOfficeLat").value = office.lat;
-  $("newOfficeLng").value = office.lng;
-  $("newOfficeRadius").value = office.radius;
-  $("officeFormTitle").textContent = "Edit Tikor Tempat Latihan";
-  $("btnSaveOffice").textContent = "💾 Perbarui Tikor Lapangan";
-  $("btnCancelOffice").style.display = "block";
-}
-
-function resetOfficeForm() {
-  $("editOfficeId").value = "";
-  $("addOfficeForm").reset();
-  $("officeFormTitle").textContent = "Atur Tikor / Tempat Latihan";
-  $("btnSaveOffice").textContent = "📍 Simpan Tikor Lapangan";
-  $("btnCancelOffice").style.display = "none";
-}
-
-async function deleteOffice(id) {
-  if (confirm("Hapus tikor ini?")) {
-    await supabaseClient.from('offices').delete().eq('id', id);
-    state.offices = state.offices.filter(o => o.id !== id);
-    renderAdminTables();
-  }
-}
-
-// ATTENDANCE & GEOLOCATION LOGIC (LOGIKA MODAL ABSEN TERBARU)
-function openAttendanceModal() {
-  $("attendanceModal").classList.add("show");
-  $("stepCapture").style.display = "block";
-  $("stepReview").style.display = "none";
-  $("modalTitle").textContent = "Absen Presensi Latihan";
-  initCameraAndMap();
-}
-
-function closeAttendanceModal() {
-  $("attendanceModal").classList.remove("show");
-  if (window.cameraStream) {
-    window.cameraStream.getTracks().forEach(track => track.stop());
-  }
-}
-
-function requestDeviceLocation(userOffice) {
-  $("geoStatus").textContent = "Memutakhirkan posisi GPS terkini...";
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(position => {
-      updateUserLocation(position.coords.latitude, position.coords.longitude, userOffice);
-    }, err => {
-      $("geoStatus").textContent = "Gagal mengambil lokasi GPS. Klik lokasi Anda pada peta manual!";
-      if(!state.userPos) {
-        updateUserLocation(userOffice.lat, userOffice.lng, userOffice);
-      }
-    }, { enableHighAccuracy: true });
-  } else {
-    if(!state.userPos) {
-      updateUserLocation(userOffice.lat, userOffice.lng, userOffice);
-    }
-  }
-}
-
-function initCameraAndMap() {
-  const cameraVideo = $("cameraPreview");
-  
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-      window.cameraStream = stream;
-      cameraVideo.srcObject = stream;
-      cameraVideo.style.display = "block";
-    }).catch(err => {
-      cameraVideo.style.display = "none";
-    });
-  }
-
-  const currentUser = state.users.find(u => u.id === state.currentUserId);
-  const userOffice = state.offices.find(o => o.id === currentUser.officeId) || state.offices[0] || { lat: -6.2844, lng: 107.1705, radius: 100, name: "Lapangan Default" };
-
-  requestDeviceLocation(userOffice);
-}
-
-function updateUserLocation(lat, lng, office) {
-  state.userPos = { lat, lng };
-  state.calculatedDistance = calculateDistance(lat, lng, office.lat, office.lng);
-
-  $("geoStatus").textContent = `Lokasi Anda: ${lat.toFixed(5)}, ${lng.toFixed(5)} (${state.calculatedDistance}m dari Lapangan)`;
-
-  // VALIDASI JIKA ANDA MASIH JAUH DARI LAPANGAN
-  if (state.calculatedDistance > office.radius) {
-    $("distanceAlert").style.display = "block";
-    $("distanceAlert").innerHTML = `⚠️ <b>Anda Masih Jauh dari Lapangan!</b><br>Jarak Anda: <b>${state.calculatedDistance}m</b> (Maksimal Radius: ${office.radius}m). Silakan geser pin jika GPS mental!`;
-    $("btnProceedReview").disabled = true;
-  } else {
-    $("distanceAlert").style.display = "none";
-    $("btnProceedReview").disabled = false;
-  }
-
-  // INISIALISASI PETA LEAFLET & INTERAKSI KLIK TIKOR
-  if (!state.map) {
-    state.map = L.map('map').setView([lat, lng], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.map);
-
-    // Marker Lingkaran Tikor Lapangan
-    state.officeCircle = L.circle([office.lat, office.lng], {
-      color: '#10B981',
-      fillColor: '#10B981',
-      fillOpacity: 0.2,
-      radius: office.radius
-    }).addTo(state.map).bindPopup(`Radius Lapangan: ${office.name}`);
-
-    // Marker User yang BISA DIGESER/DIPENCET PETA APABILA GPS MENTAL
-    state.userMarker = L.marker([lat, lng], { draggable: true }).addTo(state.map).bindPopup("Lokasi Anda (Geser jika GPS mental)").openPopup();
-
-    // Event geser marker
-    state.userMarker.on('dragend', function (e) {
-      const coord = e.target.getLatLng();
-      updateUserLocation(coord.lat, coord.lng, office);
-    });
-
-    // Event pencet/klik peta langsung ke tikor
-    state.map.on('click', function(e) {
-      const coord = e.latlng;
-      state.userMarker.setLatLng(coord);
-      updateUserLocation(coord.lat, coord.lng, office);
-    });
-
-    // TOMBOL KONTROL LOKASI TERKINI (RE-CENTER GPS)
-    const LocateControl = L.Control.extend({
-      options: { position: 'topright' },
-      onAdd: function() {
-        const btn = L.DomUtil.create('div', 'leaflet-control-locate-btn');
-        btn.innerHTML = '🎯';
-        btn.title = 'Lokasi Terkini Saya';
-        L.DomEvent.disableClickPropagation(btn);
-        btn.onclick = function() {
-          requestDeviceLocation(office);
-        };
-        return btn;
-      }
-    });
-    state.map.addControl(new LocateControl());
-
-  } else {
-    state.map.setView([lat, lng], 16);
-    state.userMarker.setLatLng([lat, lng]);
-  }
-}
-
-// LANGKAH PROSES TINJAUAN ABSEN SEBELUM TERKIRIM
-function proceedToReview() {
-  const currentUser = state.users.find(u => u.id === state.currentUserId);
-  const userOffice = state.offices.find(o => o.id === currentUser.officeId) || state.offices[0];
-
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('id-ID');
-  state.currentStatus = now.getHours() >= 18 ? "Terlambat" : "Hadir";
-
-  // Tangkap foto dari Kamera jika aktif
-  const video = $("cameraPreview");
-  const imgElem = $("capturedPhoto");
-  if (video && video.srcObject) {
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 320;
-    canvas.height = video.videoHeight || 240;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    imgElem.src = canvas.toDataURL("image/png");
-    imgElem.style.display = "block";
-  } else {
-    imgElem.style.display = "none";
-  }
-
-  $("reviewOfficeName").textContent = userOffice.name;
-  $("reviewDistance").textContent = state.calculatedDistance + " Meter";
-  $("reviewTime").textContent = timeStr;
-  
-  const badgeElem = $("reviewStatusBadge");
-  badgeElem.textContent = state.currentStatus;
-  badgeElem.className = "badge " + (state.currentStatus === "Hadir" ? "success" : "pending");
-
-  $("stepCapture").style.display = "none";
-  $("stepReview").style.display = "block";
-  $("modalTitle").textContent = "Tinjau Presensi Anda";
-}
-
-function backToCapture() {
-  $("stepCapture").style.display = "block";
-  $("stepReview").style.display = "none";
-  $("modalTitle").textContent = "Absen Presensi Latihan";
-}
-
-// PROSES SUBMIT ABSENSI KE SUPABASE DATA
-async function submitAttendance() {
-  const currentUser = state.users.find(u => u.id === state.currentUserId);
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('id-ID');
-
-  $("btnSubmitFinal").disabled = true;
-  $("btnSubmitFinal").textContent = "⏳ Mengirim...";
-
-  const attObj = {
-    user_id: currentUser.id,
-    user_name: currentUser.name,
-    time: timeStr,
-    status: state.currentStatus,
-    distance: state.calculatedDistance
-  };
-
-  const { data, error } = await supabaseClient.from('attendance').insert([attObj]).select();
-
-  $("btnSubmitFinal").disabled = false;
-  $("btnSubmitFinal").textContent = "🚀 Kirim Absen Now";
-
-  if (error) {
-    Swal.fire('Gagal', 'Gagal mengirim absensi: ' + error.message, 'error');
-  } else {
-    state.attendance.unshift({
-      id: (data && data[0]) ? data[0].id : 'att-' + Date.now(),
-      userId: currentUser.id,
-      userName: currentUser.name,
-      time: timeStr,
-      status: state.currentStatus,
-      distance: state.calculatedDistance
-    });
-
-    closeAttendanceModal();
-    Swal.fire('Berhasil!', `Absensi berhasil dikirim. Status: ${state.currentStatus}`, 'success');
-    renderApp();
-  }
-}
-
-// REALTIME CLOCK & INIT
-setInterval(() => {
-  const now = new Date();
-  if($("clock")) $("clock").textContent = now.toLocaleTimeString('id-ID');
-  if($("date")) $("date").textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
-}, 1000);
-
-document.addEventListener("DOMContentLoaded", loadInitialData);
+const $=id=>document.getElementById(id);
+function esc(v){return String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));}
+function today(){return new Date().toISOString().slice(0,10)}
+function money(n){return 'Rp '+Number(n||0).toLocaleString('id-ID')}
+function updateClock(){const n=new Date();if($('date'))$('date').textContent=n.toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});if($('clock'))$('clock').textContent=n.toLocaleTimeString('id-ID')}
+setInterval(updateClock,1000);updateClock();
+function toggleBurgerMenu(e){e.stopPropagation();$('burgerDropdown')?.classList.toggle('show')}
+document.addEventListener('click',()=> $('burgerDropdown')?.classList.remove('show'));
+function initTheme(){const t=localStorage.getItem('zetsu_theme')||'dark';document.documentElement.setAttribute('data-theme',t);updateThemeUI(t)}
+function toggleTheme(){const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);localStorage.setItem('zetsu_theme',t);updateThemeUI(t)}
+function updateThemeUI(t){const d=t==='dark';if($('loginThemeIcon'))$('loginThemeIcon').textContent=d?'🌙':'☀️';if($('loginThemeText'))$('loginThemeText').textContent=d?'Gelap':'Terang';if($('burgerThemeLabel'))$('burgerThemeLabel').textContent=(d?'🌙 Gelap':'☀️ Terang')}
+const SUPABASE_URL='https://kvqfhifpfudzjbweyqix.supabase.co';const SUPABASE_KEY='sb_publishable_D2eL1fMCCB9Y1jPu1h-jqg_yupHB67v';const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let state={currentUserId:localStorage.getItem('zetsu_user')||null,users:[],offices:[],attendance:[],spp:[],schedules:[],announcements:[],notes:[],points:[],userPos:null,calculatedDistance:null,map:null,userMarker:null,officeCircle:null,currentStatus:'Hadir',selectedOffice:null};
+function calculateDistance(a,b,c,d){const R=6371e3,p1=a*Math.PI/180,p2=c*Math.PI/180,dp=(c-a)*Math.PI/180,dl=(d-b)*Math.PI/180,x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return Math.round(R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)))}
+async function fetchTable(table,transform=x=>x){try{const r=await supabaseClient.from(table).select('*');if(r.error){console.error('Supabase '+table+':',r.error);return[]}return (r.data||[]).map(transform)}catch(e){console.error('Supabase '+table+':',e);return[]}}
+async function loadInitialData(){initTheme();try{state.offices=await fetchTable('offices');state.users=await fetchTable('users',u=>({...u,officeId:u.office_id,sppStatus:u.spp_status||'Belum Lunas'}));state.attendance=await fetchTable('attendance',a=>({...a,userId:a.user_id,userName:a.user_name,photoUrl:a.photo_url||null}));state.spp=await fetchTable('spp',s=>({...s,userId:s.user_id,userName:s.user_name}));state.schedules=await fetchTable('schedules');state.announcements=await fetchTable('announcements');state.notes=await fetchTable('coach_notes');state.points=await fetchTable('player_points');if(!state.users.length)console.warn('Tidak ada data users yang berhasil dimuat.')}catch(e){console.error('loadInitialData:',e)}finally{$('appLoadingScreen').style.display='none';renderApp()}}
+async function handleLogin(e){e.preventDefault();const u=$('inputUsername').value.trim(),p=$('inputPassword').value.trim(),btn=$('loginBtn');if(!u||!p)return;btn.disabled=true;btn.textContent='⏳ Memeriksa...';try{let r=await supabaseClient.from('users').select('*').ilike('id',u).limit(1).maybeSingle();if(r.error)throw r.error;const found=r.data;if(!found){Swal.fire('Gagal Masuk','ID pemain/admin tidak ditemukan','error');return}if(String(found.pin)!==p){Swal.fire('Gagal Masuk','PIN salah','error');return}const user={...found,officeId:found.office_id,sppStatus:found.spp_status||'Belum Lunas'};const idx=state.users.findIndex(x=>String(x.id).toLowerCase()===String(user.id).toLowerCase());if(idx>=0)state.users[idx]=user;else state.users.push(user);state.currentUserId=user.id;localStorage.setItem('zetsu_user',user.id);Swal.fire({icon:'success',title:'Berhasil Masuk!',text:`Selamat datang, ${user.name}`,timer:1200,showConfirmButton:false});renderApp()}catch(e){console.error('Login Supabase:',e);Swal.fire('Koneksi Supabase Gagal',e.message||'Tidak dapat mengakses tabel users','error')}finally{btn.disabled=false;btn.textContent='🔑 Masuk Sistem'}}
+function handleLogout(){localStorage.removeItem('zetsu_user');state.currentUserId=null;renderApp()}
+function renderApp(){if(!state.currentUserId){$('loginScreen').style.display='flex';$('mainApp').style.display='none';$('adminBottomNav').style.display='none';return}const u=state.users.find(x=>String(x.id)===String(state.currentUserId))||{id:state.currentUserId,name:state.currentUserId,role:'Pemain'};$('loginScreen').style.display='none';$('mainApp').style.display='block';$('displayName').textContent=u.name;$('avatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('displayRoleBadge').innerHTML=`<span class="badge">${esc(u.role||'Pemain')}</span>`;const admin=String(u.id)==='admin'||String(u.role||'').includes('Pelatih');$('adminArea').style.display=admin?'block':'none';$('employeeArea').style.display=admin?'none':'block';$('adminBottomNav').style.display=admin?'flex':'none';if(admin){renderAdminTables();switchAdminTab('dashboard')}else renderEmployeeDashboard(u)}
+function monthName(m){return ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][m]}
+function currentSpp(user){const n=new Date();return state.spp.find(s=>String(s.user_id??s.userId)===String(user.id)&&Number(s.year)===n.getFullYear()&&String(s.month)===monthName(n.getMonth()))||null}
+function calcStreak(userId){const days=[...new Set(state.attendance.filter(a=>String(a.user_id??a.userId)===String(userId)&&['Hadir','Terlambat'].includes(a.status)).map(a=>String(a.date||a.time||'').slice(0,10)).filter(Boolean))].sort().reverse();let streak=0,d=new Date();for(const x of days){const ds=d.toISOString().slice(0,10);if(x===ds){streak++;d.setDate(d.getDate()-1)}else if(streak===0){d.setDate(d.getDate()-1);if(x===d.toISOString().slice(0,10)){streak++;d.setDate(d.getDate()-1)}else break}else break}return streak}
+function userPoints(id){return state.points.filter(p=>String(p.user_id??p.userId)===String(id)).reduce((a,p)=>a+Number(p.amount||0),0)}
+function renderEmployeeDashboard(user){const office=state.offices.find(o=>String(o.id)===String(user.office_id??user.officeId))||state.offices[0]||{name:'Belum Diplot'};$('assignedBasecampName')&&($('assignedBasecampName').textContent=office.name);$('playerProfileName').textContent=user.name;$('playerProfileMeta').textContent=`${user.id} • ${user.role||'Pemain'} • ${office.name}`;$('playerAvatar').textContent=(user.name||'ZS').slice(0,2).toUpperCase();const logs=state.attendance.filter(a=>String(a.user_id??a.userId)===String(user.id));const hadir=logs.filter(a=>a.status==='Hadir').length,late=logs.filter(a=>a.status==='Terlambat').length;$('hadirCount').textContent=hadir;$('terlambatCount').textContent=late;$('attendancePercent').textContent=logs.length?Math.round((hadir+late)/logs.length*100)+'%':'0%';const pts=userPoints(user.id),streak=calcStreak(user.id);$('playerPoints').textContent=pts;$('playerStreak').textContent=streak+'x';$('streakProgress').style.width=Math.min(streak*20,100)+'%';const spp=currentSpp(user);if($('sppStatus'))$('sppStatus').textContent=spp?spp.status:(user.spp_status||'Belum Bayar');$('playerSppCard').innerHTML=spp?`<b>${esc(spp.month)} ${spp.year} • ${money(spp.amount)}</b><span class="pill">${esc(spp.status)}</span><small style="display:block;color:var(--text-muted);margin-top:5px;">${spp.method||'-'} ${spp.paid_date?'• '+spp.paid_date:''}</small>`:'<b>Belum ada catatan SPP bulan ini</b>';
+const upcoming=state.schedules.filter(s=>String(s.date)>=today()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time))[0];$('playerNextSchedule').innerHTML=upcoming?`<b>${esc(upcoming.title)}</b><span>${upcoming.date} • ${upcoming.time} • ${esc((state.offices.find(o=>String(o.id)===String(upcoming.office_id))||{}).name||'-')}</span><small style="display:block;color:var(--text-muted);margin-top:4px;">${esc(upcoming.group_name||'Semua')} • ${esc(upcoming.coach||'-')}</small>`:'<b>Belum ada jadwal latihan</b>';
+$('playerAnnouncements').innerHTML=state.announcements.slice(0,5).map(a=>`<div class="notice-item"><b>${esc(a.title)} ${a.priority==='Penting'?'<span class="pill">PENTING</span>':''}</b><span>${esc(a.body)}</span><small style="display:block;color:var(--text-muted);margin-top:5px;">${a.date||''}</small></div>`).join('')||'<div class="empty">Belum ada pengumuman.</div>';$('playerNotes').innerHTML=state.notes.filter(n=>String(n.user_id??n.userId)===String(user.id)).slice(0,5).map(n=>`<div class="note-item"><b>${esc(n.note_type||'Catatan')}</b><span>${esc(n.body)}</span><small style="display:block;color:var(--text-muted);margin-top:5px;">${n.created_at?new Date(n.created_at).toLocaleDateString('id-ID'):''}</small></div>`).join('')||'<div class="empty">Belum ada catatan.</div>';$('playerHistoryCount').textContent=logs.length+' Catatan';$('playerAttendanceHistoryBody').innerHTML=logs.slice(0,20).map(a=>`<tr><td>${a.photoUrl?`<img src="${esc(a.photoUrl)}" class="img-thumb" onclick="previewImage('${esc(a.photoUrl)}')">`:'-'}</td><td><b>${esc(a.date||'')}</b><br><small>${esc(a.time||'')}</small></td><td>${esc((state.offices.find(o=>String(o.id)===String(a.office_id))||office).name||'-')}</td><td><span class="badge ${a.status==='Hadir'?'success':a.status==='Terlambat'?'pending':'danger'}">${esc(a.status)}</span></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Belum ada riwayat.</td></tr>'}
+function switchAdminTab(tab){const tabs=['dashboard','users','schedules','spp','attendance','offices','academy'];tabs.forEach(t=>{const e=$('tab'+t.charAt(0).toUpperCase()+t.slice(1));if(e)e.style.display=t===tab?'block':'none'});document.querySelectorAll('.admin-tabs button,.bottom-nav-item').forEach(b=>b.classList.remove('active'));document.querySelectorAll(`[onclick="switchAdminTab('${tab}')"]`).forEach(b=>b.classList.add('active'));if(tab==='dashboard')renderAdminDashboard()}
+function fillSelect(id,items,placeholder){const e=$(id);if(!e)return;e.innerHTML=(placeholder?`<option value="">${placeholder}</option>`:'')+items.map(x=>`<option value="${esc(x.id)}">${esc(x.name||x.title||x.id)}</option>`).join('')}
+function renderAdminTables(){fillSelect('newUserOffice',state.offices,'Pilih lapangan');fillSelect('scheduleOffice',state.offices,'Pilih lapangan');const players=state.users.filter(u=>String(u.id)!=='admin');fillSelect('sppUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('attUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('noteUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');fillSelect('pointUserId',players.map(u=>({id:u.id,name:`${u.name} (${u.id})`})),'Pilih pemain');const sm=$('sppMonth');if(sm&&!sm.options.length)sm.innerHTML=monthName(new Date().getMonth());else if(sm&&!sm.value)sm.value=monthName(new Date().getMonth());if($('sppYear')){const years=[...new Set([new Date().getFullYear(),...state.spp.map(s=>s.year)])].sort().reverse();$('sppFilterYear').innerHTML='<option value="">Semua Tahun</option>'+years.map(y=>`<option>${y}</option>`).join('')}
+const q=($('userSearch')?.value||'').toLowerCase();$('userTableBody').innerHTML=players.filter(u=>(u.name+' '+u.id).toLowerCase().includes(q)).map(u=>`<tr><td><b>${esc(u.name)}</b><br><small>${esc(u.id)}</small></td><td>${esc(u.role)}</td><td>${esc((state.offices.find(o=>String(o.id)===String(u.office_id??u.officeId))||{}).name||'-')}</td><td>${esc(u.spp_status||u.sppStatus||'Belum Lunas')}</td><td><button class="btn-warning" onclick="editUser('${esc(u.id)}')">Edit</button> <button class="btn-danger" onclick="deleteUser('${esc(u.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Tidak ada pemain.</td></tr>';
+const sf=$('sppFilterStatus')?.value||'',sy=$('sppFilterYear')?.value||'';$('sppTableBody').innerHTML=state.spp.filter(s=>(!sf||s.status===sf)&&(!sy||String(s.year)===sy)).map(s=>`<tr><td><b>${esc(s.user_name||s.userName||s.user_id)}</b><br><small>${esc(s.user_id||s.userId)}</small></td><td>${esc(s.month)} ${s.year}</td><td>${money(s.amount)}</td><td><span class="badge ${s.status==='Lunas'?'success':'danger'}">${esc(s.status)}</span></td><td>${s.paid_date||'-'}<br><small>${esc(s.method||'')}</small></td><td><button class="btn-warning" onclick="editSpp('${esc(s.id)}')">Edit</button> <button class="btn-danger" onclick="deleteSppRecord('${esc(s.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Belum ada data SPP.</td></tr>';
+const ad=$('attFilterDate')?.value||'',as=$('attFilterStatus')?.value||'';$('attendanceTableBody').innerHTML=state.attendance.filter(a=>(!ad||a.date===ad)&&(!as||a.status===as)).map(a=>`<tr><td>${a.photo_url||a.photoUrl?`<img src="${esc(a.photo_url||a.photoUrl)}" class="img-thumb">`:'-'}</td><td><b>${esc(a.user_name||a.userName)}</b><br><small>${esc(a.user_id||a.userId)}</small></td><td>${esc(a.date||'')}<br>${esc(a.time||'')}</td><td>${esc(a.status)}</td><td>${a.distance||0}m</td><td><button class="btn-warning" onclick="editAttendance('${esc(a.id)}')">Edit</button> <button class="btn-danger" onclick="deleteAttendance('${esc(a.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Belum ada absensi.</td></tr>';$('officeTableBody').innerHTML=state.offices.map(o=>`<tr><td><b>${esc(o.name)}</b><br><small>${esc(o.address||'')}</small></td><td>${o.lat}, ${o.lng}</td><td>${o.radius}m</td><td><button class="btn-warning" onclick="editOffice('${esc(o.id)}')">Edit</button> <button class="btn-danger" onclick="deleteOffice('${esc(o.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Belum ada lapangan.</td></tr>';renderSchedules();renderAcademyLists();renderAdminDashboard()}
+function renderAdminDashboard(){if(!$('admTotalPlayers'))return;const ps=state.users.filter(u=>String(u.id)!=='admin'),d=today(),td=state.attendance.filter(a=>a.date===d);$('admTotalPlayers').textContent=ps.length;$('admTodayPresent').textContent=td.filter(a=>a.status==='Hadir').length;$('admTodayLate').textContent=td.filter(a=>a.status==='Terlambat').length;$('admUnpaid').textContent=ps.filter(u=>(u.spp_status||u.sppStatus)!=='Lunas').length;const days=[...Array(7)].map((_,i)=>{const x=new Date();x.setDate(x.getDate()-6+i);const ds=x.toISOString().slice(0,10);return{ds,n:state.attendance.filter(a=>a.date===ds&&['Hadir','Terlambat'].includes(a.status)).length}});const max=Math.max(1,...days.map(x=>x.n));$('attendanceChart').innerHTML=days.map(x=>`<div class="bar-row"><span>${x.ds.slice(5)}</span><div class="bar"><span style="width:${x.n/max*100}%"></span></div><b>${x.n}</b></div>`).join('');$('adminRanking').innerHTML=ps.map(u=>({u,p:userPoints(u.id)})).sort((a,b)=>b.p-a.p).slice(0,5).map((x,i)=>`<div class="rank-row"><div class="rank-num">${i+1}</div><div style="flex:1"><b>${esc(x.u.name)}</b><small style="display:block;color:var(--text-muted)">${esc(x.u.role||'Pemain')}</small></div><strong>${x.p} pts</strong></div>`).join('')||'<div class="empty">Belum ada poin.</div>'}
+async function dbSave(table,payload,id){const q=id?supabaseClient.from(table).update(payload).eq('id',id):supabaseClient.from(table).insert([payload]).select();return await q}
+async function handleSaveUser(e){e.preventDefault();const idx=+$('editUserIndex').value,id=$('newUserId').value.trim(),payload={name:$('newUserName').value.trim(),role:$('newUserRole').value,office_id:$('newUserOffice').value,pin:$('newUserPassword').value,phone:$('newUserPhone').value.trim()};let r=idx>=0?await dbSave('users',payload,state.users[idx].id):await dbSave('users',{id,...payload,spp_status:'Belum Lunas'});if(!r.error){await reload();resetUserForm();Swal.fire('Sukses','Data pemain tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editUser(id){const i=state.users.findIndex(u=>String(u.id)===String(id)),u=state.users[i];$('editUserIndex').value=i;$('newUserId').value=u.id;$('newUserId').disabled=true;$('newUserName').value=u.name||'';$('newUserRole').value=u.role||'Flank';$('newUserOffice').value=(u.office_id??u.officeId??'');$('newUserPhone').value=u.phone||'';$('newUserPassword').value=u.pin||'';$('userFormTitle').textContent='✏️ Edit Pemain';$('btnSaveUser').textContent='💾 Perbarui';$('btnCancelUser').style.display='block'}
+function resetUserForm(){$('editUserIndex').value=-1;$('addUserForm').reset();$('newUserId').disabled=false;$('userFormTitle').textContent='➕ Tambah Pemain';$('btnSaveUser').textContent='💾 Simpan Pemain';$('btnCancelUser').style.display='none'}
+async function deleteUser(id){if((await Swal.fire({title:'Hapus pemain?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya, hapus'})).isConfirmed){const r=await supabaseClient.from('users').delete().eq('id',id);if(!r.error)reload();else Swal.fire('Gagal',r.error.message,'error')}}
+async function handleSaveSchedule(e){e.preventDefault();const id=$('editScheduleId').value,p={title:$('scheduleTitle').value,date:$('scheduleDate').value,time:$('scheduleTime').value,office_id:$('scheduleOffice').value,group_name:$('scheduleGroup').value,coach:$('scheduleCoach').value};const r=await dbSave('schedules',p,id);if(!r.error){reload();resetScheduleForm();Swal.fire('Sukses','Jadwal tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function resetScheduleForm(){$('editScheduleId').value='';document.querySelector('#tabSchedules form').reset();$('btnCancelSchedule').style.display='none'}
+function renderSchedules(){$('scheduleAdminList').innerHTML=state.schedules.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).map(s=>`<div class="schedule-item"><b>${esc(s.title)}</b><span>${s.date} • ${s.time} • ${esc((state.offices.find(o=>String(o.id)===String(s.office_id))||{}).name||'-')}</span><small style="display:block;color:var(--text-muted);">${esc(s.group_name||'Semua')} • ${esc(s.coach||'-')}</small><div style="margin-top:7px"><button class="btn-warning" onclick="editSchedule('${esc(s.id)}')">Edit</button> <button class="btn-danger" onclick="deleteSchedule('${esc(s.id)}')">Hapus</button></div></div>`).join('')||'<div class="empty">Belum ada jadwal.</div>'}
+function editSchedule(id){const s=state.schedules.find(x=>String(x.id)===String(id));$('editScheduleId').value=s.id;$('scheduleTitle').value=s.title;$('scheduleDate').value=s.date;$('scheduleTime').value=s.time;$('scheduleOffice').value=s.office_id;$('scheduleGroup').value=s.group_name||'';$('scheduleCoach').value=s.coach||'';$('btnCancelSchedule').style.display='block'}
+async function deleteSchedule(id){if((await Swal.fire({title:'Hapus jadwal?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('schedules').delete().eq('id',id);if(!r.error)reload()}}
+async function handleSaveSpp(e){e.preventDefault();const id=$('editSppId').value,u=state.users.find(x=>String(x.id)===String($('sppUserId').value)),p={user_id:u.id,user_name:u.name,month:$('sppMonth').value,year:+$('sppYear').value,amount:+$('sppAmount').value,status:$('sppStatusInput').value,paid_date:$('sppPaidDate').value||null,method:$('sppMethod').value,due_date:$('sppDueDate').value||null,notes:$('sppNotes').value};const r=await dbSave('spp',p,id);if(!r.error){await supabaseClient.from('users').update({spp_status:p.status}).eq('id',u.id);reload();resetSppForm();Swal.fire('Sukses','SPP tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editSpp(id){const s=state.spp.find(x=>String(x.id)===String(id));$('editSppId').value=s.id;$('sppUserId').value=s.user_id??s.userId;$('sppMonth').value=s.month;$('sppYear').value=s.year;$('sppAmount').value=s.amount;$('sppStatusInput').value=s.status;$('sppPaidDate').value=s.paid_date||'';$('sppMethod').value=s.method||'Transfer';$('sppDueDate').value=s.due_date||'';$('sppNotes').value=s.notes||'';$('btnCancelSpp').style.display='block'}
+function resetSppForm(){document.querySelector('#tabSpp form').reset();$('editSppId').value='';$('btnCancelSpp').style.display='none'}
+async function deleteSppRecord(id){if((await Swal.fire({title:'Hapus transaksi SPP?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('spp').delete().eq('id',id);if(!r.error)reload()}}
+async function handleSaveAttendance(e){e.preventDefault();const id=$('editAttId').value,u=state.users.find(x=>String(x.id)===String($('attUserId').value)),p={user_id:u.id,user_name:u.name,date:$('attDate').value,time:$('attTime').value,status:$('attStatus').value};const r=await dbSave('attendance',p,id);if(!r.error){reload();resetAttendanceForm();Swal.fire('Sukses','Absensi tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editAttendance(id){const a=state.attendance.find(x=>String(x.id)===String(id));$('editAttId').value=a.id;$('attUserId').value=a.user_id??a.userId;$('attDate').value=a.date||today();$('attTime').value=a.time||'';$('attStatus').value=a.status;$('btnCancelAtt').style.display='block'}
+function resetAttendanceForm(){document.querySelector('#tabAttendance form').reset();$('editAttId').value='';$('btnCancelAtt').style.display='none'}
+async function deleteAttendance(id){if((await Swal.fire({title:'Hapus absensi?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('attendance').delete().eq('id',id);if(!r.error)reload()}}
+async function handleSaveOffice(e){e.preventDefault();const id=$('editOfficeId').value,p={name:$('newOfficeName').value,lat:+$('newOfficeLat').value,lng:+$('newOfficeLng').value,radius:+$('newOfficeRadius').value,address:$('newOfficeAddress').value};const r=await dbSave('offices',p,id);if(!r.error){reload();resetOfficeForm();Swal.fire('Sukses','Lapangan tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function editOffice(id){const o=state.offices.find(x=>String(x.id)===String(id));$('editOfficeId').value=o.id;$('newOfficeName').value=o.name;$('newOfficeLat').value=o.lat;$('newOfficeLng').value=o.lng;$('newOfficeRadius').value=o.radius;$('newOfficeAddress').value=o.address||'';$('btnCancelOffice').style.display='block'}
+function resetOfficeForm(){document.querySelector('#tabOffices form').reset();$('editOfficeId').value='';$('btnCancelOffice').style.display='none'}
+async function deleteOffice(id){if((await Swal.fire({title:'Hapus lapangan?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya'})).isConfirmed){const r=await supabaseClient.from('offices').delete().eq('id',id);if(!r.error)reload()}}
+async function handleSaveAnnouncement(e){e.preventDefault();const p={title:$('announcementTitle').value,body:$('announcementBody').value,priority:$('announcementPriority').value,date:$('announcementDate').value};const r=await dbSave('announcements',p,$('editAnnouncementId').value);if(!r.error){reload();e.target.reset();Swal.fire('Sukses','Pengumuman diterbitkan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+function renderAcademyLists(){$('announcementAdminList').innerHTML=state.announcements.map(a=>`<div class="notice-item"><b>${esc(a.title)}</b><span>${esc(a.body)}</span><small>${a.date||''} • ${esc(a.priority||'Normal')}</small><div><button class="btn-danger" onclick="deleteAnnouncement('${esc(a.id)}')">Hapus</button></div></div>`).join('')||'<div class="empty">Belum ada pengumuman.</div>';$('notesAdminList').innerHTML=state.notes.slice(0,30).map(n=>`<div class="note-item"><b>${esc(n.user_name||n.user_id)} • ${esc(n.note_type||'Catatan')}</b><span>${esc(n.body)}</span><button class="btn-danger" onclick="deleteNote('${esc(n.id)}')">Hapus</button></div>`).join('')||'<div class="empty">Belum ada catatan.</div>';$('pointsAdminList').innerHTML=state.points.slice(0,30).map(p=>`<div class="note-item"><b>${esc(p.user_name||p.user_id)} • ${p.amount>0?'+':''}${p.amount} pts</b><span>${esc(p.reason)}</span><button class="btn-danger" onclick="deletePoint('${esc(p.id)}')">Hapus</button></div>`).join('')||'<div class="empty">Belum ada transaksi poin.</div>'}
+async function handleSaveCoachNote(e){e.preventDefault();const u=state.users.find(x=>String(x.id)===String($('noteUserId').value)),p={user_id:u.id,user_name:u.name,body:$('noteBody').value,note_type:$('noteType').value};const r=await dbSave('coach_notes',p,$('editNoteId').value);if(!r.error){reload();e.target.reset();Swal.fire('Sukses','Catatan tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+async function handleSavePoint(e){e.preventDefault();const u=state.users.find(x=>String(x.id)===String($('pointUserId').value)),p={user_id:u.id,user_name:u.name,amount:+$('pointAmount').value,reason:$('pointReason').value};const r=await dbSave('player_points',p);if(!r.error){reload();e.target.reset();Swal.fire('Sukses','Poin tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+async function deleteAnnouncement(id){const r=await supabaseClient.from('announcements').delete().eq('id',id);if(!r.error)reload()}async function deleteNote(id){const r=await supabaseClient.from('coach_notes').delete().eq('id',id);if(!r.error)reload()}async function deletePoint(id){const r=await supabaseClient.from('player_points').delete().eq('id',id);if(!r.error)reload()}
+function previewImage(url){Swal.fire({imageUrl:url,imageAlt:'Foto Absensi',showConfirmButton:false,showCloseButton:true,background:getComputedStyle(document.documentElement).getPropertyValue('--surface'),color:getComputedStyle(document.documentElement).getPropertyValue('--text-main')})}
+function openAttendanceModal(){$('attendanceModal').classList.add('show');$('stepCapture').style.display='block';$('stepReview').style.display='none';$('modalTitle').textContent='Absen Presensi Latihan';state.userPos=null;state.calculatedDistance=null;state.map=null;state.userMarker=null;state.officeCircle=null;state.cameraImageData=null;resetCameraUI();initCameraAndMap()}
+function closeAttendanceModal(){$('attendanceModal').classList.remove('show');if(window.cameraStream){window.cameraStream.getTracks().forEach(t=>t.stop());window.cameraStream=null}}
+function resetCameraUI(){const v=$('cameraPreview'),f=$('cameraFallbackPreview'),st=$('cameraStatus'),act=$('cameraFallbackActions'),input=$('cameraFallbackInput');if(v){v.srcObject=null;v.style.display='block'}if(f){f.src='';f.style.display='none'}if(st){st.style.display='flex';st.textContent='📷 Menyiapkan kamera...'}if(act)act.style.display='none';if(input)input.value='';$('btnProceedReview').disabled=true}
+function cameraErrorText(e){const n=e?.name||'';if(n==='NotAllowedError'||n==='PermissionDeniedError')return '❌ Izin kamera ditolak. Izinkan kamera di browser lalu tekan TES LAGI.';if(n==='NotFoundError'||n==='DevicesNotFoundError')return '❌ Kamera tidak ditemukan di perangkat.';if(n==='NotReadableError'||n==='TrackStartError')return '❌ Kamera sedang dipakai aplikasi lain.';if(n==='SecurityError')return '❌ Browser memblokir kamera pada halaman lokal ini.';return '⚠️ Kamera live tidak tersedia di browser/file lokal ini. Gunakan tombol Buka Kamera HP.'}
+function openNativeCamera(){$('cameraFallbackInput')?.click()}
+function handleCameraFile(e){const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{state.cameraImageData=reader.result;const f=$('cameraFallbackPreview'),v=$('cameraPreview'),st=$('cameraStatus');f.src=reader.result;f.style.display='block';v.style.display='none';if(st)st.style.display='none';$('btnProceedReview').disabled=false};reader.readAsDataURL(file)}
+function startCamera(){const v=$('cameraPreview'),st=$('cameraStatus'),act=$('cameraFallbackActions');if(!navigator.mediaDevices?.getUserMedia){if(st){st.textContent='📱 Browser lokal tidak menyediakan kamera live.'}if(act)act.style.display='block';return}navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'user'},width:{ideal:1280},height:{ideal:720}},audio:false}).then(async s=>{window.cameraStream=s;v.srcObject=s;v.style.display='block';if(st)st.style.display='none';try{await v.play()}catch(_){}$('btnProceedReview').disabled=false}).catch(e=>{console.warn('Camera:',e);if(st){st.style.display='flex';st.textContent=cameraErrorText(e)}if(act)act.style.display='block'})}
+function requestDeviceLocation(office){$('geoStatus').textContent='Mengambil GPS akurat...';if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>updateUserLocation(p.coords.latitude,p.coords.longitude,office,p.coords.accuracy),e=>{$('geoStatus').textContent='GPS gagal diambil: '+(e?.message||'izin lokasi ditolak');}, {enableHighAccuracy:true,timeout:15000,maximumAge:0});else $('geoStatus').textContent='Browser tidak mendukung GPS.'}
+function initCameraAndMap(){const input=$('cameraFallbackInput');if(input)input.onchange=handleCameraFile;startCamera();const u=state.users.find(x=>String(x.id)===String(state.currentUserId)),o=state.offices.find(x=>String(x.id)===String(u?.office_id??u?.officeId))||state.offices[0]||{lat:-6.2844,lng:107.1705,radius:100,name:'Lapangan Default'};state.selectedOffice=o;requestDeviceLocation(o);setTimeout(()=>state.map&&state.map.invalidateSize(),400)}
+function updateUserLocation(lat,lng,o,accuracy){state.userPos={lat,lng,accuracy};state.calculatedDistance=calculateDistance(lat,lng,o.lat,o.lng);$('geoStatus').textContent=`GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)} • Jarak ${state.calculatedDistance}m${accuracy?' • Akurasi ±'+Math.round(accuracy)+'m':''}`;if(state.calculatedDistance>o.radius){$('distanceAlert').style.display='block';$('distanceAlert').innerHTML=`⚠️ Di luar radius. Jarak <b>${state.calculatedDistance}m</b>, maksimal <b>${o.radius}m</b>`;$('btnProceedReview').disabled=true}else{$('distanceAlert').style.display='none';if(window.cameraStream||state.cameraImageData)$('btnProceedReview').disabled=false}if(!state.map){state.map=L.map('map').setView([lat,lng],16);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.map);state.officeCircle=L.circle([o.lat,o.lng],{color:'#10B981',fillColor:'#10B981',fillOpacity:.2,radius:o.radius}).addTo(state.map);state.userMarker=L.marker([lat,lng]).addTo(state.map)}else{state.map.setView([lat,lng],16);state.userMarker.setLatLng([lat,lng])}}
+function proceedToReview(){const u=state.users.find(x=>String(x.id)===String(state.currentUserId)),v=$('cameraPreview'),img=$('capturedPhoto'),n=new Date();state.currentStatus=n.getHours()>=18?'Terlambat':'Hadir';if(state.cameraImageData){img.src=state.cameraImageData;img.style.display='block'}else if(v?.srcObject){const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||480;c.getContext('2d').drawImage(v,0,0,c.width,c.height);img.src=c.toDataURL('image/png');img.style.display='block'}else{Swal.fire('Kamera belum siap','Ambil foto terlebih dahulu.','warning');return}$('reviewOfficeName').textContent=state.selectedOffice?.name||'-';$('reviewDistance').textContent=(state.calculatedDistance||0)+' Meter';$('reviewTime').textContent=n.toLocaleTimeString('id-ID');$('reviewStatusBadge').textContent=state.currentStatus;$('reviewStatusBadge').className='badge '+(state.currentStatus==='Hadir'?'success':'pending');$('stepCapture').style.display='none';$('stepReview').style.display='block';$('modalTitle').textContent='Tinjau Presensi Anda'}
+function backToCapture(){$('stepCapture').style.display='block';$('stepReview').style.display='none';$('modalTitle').textContent='Absen Presensi Latihan'}
+async function submitAttendance(){const u=state.users.find(x=>String(x.id)===String(state.currentUserId)),n=new Date();let photoUrl=null;$('btnSubmitFinal').disabled=true;$('btnSubmitFinal').textContent='⏳ Menyimpan...';try{const img=$('capturedPhoto');if(img.src?.startsWith('data:image')){const blob=await(await fetch(img.src)).blob(),name=`att_${u.id}_${Date.now()}.png`,up=await supabaseClient.storage.from('attendance-photos').upload(name,blob,{contentType:'image/png'});if(!up.error)photoUrl=supabaseClient.storage.from('attendance-photos').getPublicUrl(name).data.publicUrl}const p={user_id:u.id,user_name:u.name,date:today(),time:n.toLocaleTimeString('id-ID'),status:state.currentStatus,distance:state.calculatedDistance||0,latitude:state.userPos?.lat||null,longitude:state.userPos?.lng||null,accuracy:state.userPos?.accuracy||null,office_id:state.selectedOffice?.id||null,photo_url:photoUrl,schedule_id:null};const r=await supabaseClient.from('attendance').insert([p]);if(r.error)throw r.error;closeAttendanceModal();await reload();Swal.fire('Berhasil Absen!',`Status: ${p.status}`,'success')}catch(e){Swal.fire('Gagal',e.message||'Tidak dapat menyimpan','error')}finally{$('btnSubmitFinal').disabled=false;$('btnSubmitFinal').textContent='🚀 Kirim Absen'}}
+async function reload(){await loadInitialData()}
+async function testSupabaseConnection(){try{const r=await supabaseClient.from('users').select('id').limit(1);if(r.error)console.error('SUPABASE CONNECTION:',r.error)}catch(e){console.error('SUPABASE CONNECTION:',e)}}
+window.addEventListener('DOMContentLoaded',()=>{if($('sppMonth'))$('sppMonth').innerHTML=Array.from({length:12},(_,i)=>`<option>${monthName(i)}</option>`).join('');if($('sppPaidDate'))$('sppPaidDate').value=today();if($('sppDueDate'))$('sppDueDate').value=today();if($('attDate'))$('attDate').value=today();if($('announcementDate'))$('announcementDate').value=today();loadInitialData();testSupabaseConnection()});
 </script>
 </body>
 </html>
