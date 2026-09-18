@@ -330,8 +330,69 @@ async function loadInitialData(){initTheme();state._dataLoading=true;state._data
  for(const result of results){if(result.status==='fulfilled'){const [key,data]=result.value;state[key]=data}else{const key=Object.keys(jobs)[results.indexOf(result)];state._dataLoadErrors.push(key);console.error('loadInitialData '+key+':',result.reason)}}
  state._dataLoading=false;$('appLoadingScreen').style.display='none';renderApp();
  if(state._dataLoadErrors.length&&state.currentUserId&&typeof Swal!=='undefined'){Swal.fire({icon:'warning',title:'Sebagian data belum termuat',text:'Koneksi Supabase bermasalah pada: '+state._dataLoadErrors.join(', ')+'. Data yang sudah ada di layar tidak dihapus.',confirmButtonText:'Mengerti'});}}
-function setCurrentUser(user,authUserId=null){const normalized={...user,officeId:user.office_id,sppStatus:user.spp_status||'Belum Lunas'};const idx=state.users.findIndex(x=>String(x.id).toLowerCase()===String(normalized.id).toLowerCase());if(idx>=0)state.users[idx]=normalized;else state.users.push(normalized);state.currentUserId=normalized.id;state.currentAuthUserId=authUserId||normalized.auth_user_id||null;return normalized}
-async function restoreAuthSession(){try{const sr=await supabaseClient.auth.getSession();const session=sr?.data?.session;if(!session?.user?.id){state.currentUserId=null;state.currentAuthUserId=null;return null}const r=await supabaseClient.from('users').select('*').eq('auth_user_id',session.user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){await supabaseClient.auth.signOut();state.currentUserId=null;state.currentAuthUserId=null;return null}return setCurrentUser(r.data,session.user.id)}catch(e){console.error('Restore Auth session:',e);state.currentUserId=null;state.currentAuthUserId=null;return null}}
+function setCurrentUser(user,authUserId=null){
+  const normalized={...user,officeId:user.office_id,sppStatus:user.spp_status||'Belum Lunas'};
+  const idx=state.users.findIndex(x=>String(x.id).toLowerCase()===String(normalized.id).toLowerCase());
+  if(idx>=0)state.users[idx]=normalized;else state.users.push(normalized);
+  state.currentUserId=normalized.id;
+  state.currentAuthUserId=authUserId||normalized.auth_user_id||null;
+
+  /* Pemain lama yang masih login memakai ID + PIN belum punya Supabase Auth.
+     Simpan hanya ID pemain (bukan PIN) agar refresh tidak mengeluarkan mereka.
+     Akun yang sudah memakai Auth TIDAK memakai fallback ini. */
+  if(!state.currentAuthUserId){
+    localStorage.setItem('zetsu_user',JSON.stringify({id:normalized.id}));
+  }else{
+    localStorage.removeItem('zetsu_user');
+  }
+  return normalized;
+}
+async function restoreAuthSession(){
+  try{
+    const sr=await supabaseClient.auth.getSession();
+    const session=sr?.data?.session;
+
+    /* 1) Akun Supabase Auth: pulihkan dari session Auth. */
+    if(session?.user?.id){
+      const r=await supabaseClient.from('users').select('*').eq('auth_user_id',session.user.id).maybeSingle();
+      if(r.error)throw r.error;
+      if(!r.data){
+        await supabaseClient.auth.signOut();
+        state.currentUserId=null;
+        state.currentAuthUserId=null;
+        return null;
+      }
+      return setCurrentUser(r.data,session.user.id);
+    }
+
+    /* 2) Pemain lama (ID + PIN): pulihkan ID dari localStorage.
+       Profil lengkap akan diambil oleh loadInitialData() sesudahnya. */
+    let saved=null;
+    try{saved=JSON.parse(localStorage.getItem('zetsu_user')||'null')}catch(_){saved=null}
+    if(saved?.id){
+      state.currentUserId=String(saved.id);
+      state.currentAuthUserId=null;
+      return {id:state.currentUserId};
+    }
+
+    state.currentUserId=null;
+    state.currentAuthUserId=null;
+    return null;
+  }catch(e){
+    console.error('Restore Auth session:',e);
+    /* Jangan menghapus login pemain lama hanya karena pengecekan Auth gagal. */
+    let saved=null;
+    try{saved=JSON.parse(localStorage.getItem('zetsu_user')||'null')}catch(_){saved=null}
+    if(saved?.id){
+      state.currentUserId=String(saved.id);
+      state.currentAuthUserId=null;
+      return {id:state.currentUserId};
+    }
+    state.currentUserId=null;
+    state.currentAuthUserId=null;
+    return null;
+  }
+}
 async function handleLogin(e){
  e.preventDefault();
  const login=$('inputUsername').value.trim(),p=$('inputPassword').value.trim(),btn=$('loginBtn');
