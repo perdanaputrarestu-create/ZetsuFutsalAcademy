@@ -61,7 +61,7 @@ button[aria-busy="true"]{opacity:.65;cursor:wait;pointer-events:none}
         </div>
         <div class="input-group">
           <label>Kata Sandi / PIN</label>
-          <input type="password" id="inputPassword" placeholder="Masukkan PIN" required>
+          <input type="password" id="inputPassword" placeholder="Masukkan PIN / Password" required>
         </div>
         <button type="submit" class="btn-go" id="loginBtn">🔑 Masuk Sistem</button>
       </form>
@@ -267,7 +267,7 @@ function initTheme(){const t=localStorage.getItem('zetsu_theme')||'dark';documen
 function toggleTheme(){const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);localStorage.setItem('zetsu_theme',t);updateThemeUI(t)}
 function updateThemeUI(t){const d=t==='dark';if($('loginThemeIcon'))$('loginThemeIcon').textContent=d?'🌙':'☀️';if($('loginThemeText'))$('loginThemeText').textContent=d?'Gelap':'Terang';if($('burgerThemeLabel'))$('burgerThemeLabel').textContent=(d?'🌙 Gelap':'☀️ Terang')}
 const SUPABASE_URL='https://kvqfhifpfudzjbweyqix.supabase.co';const SUPABASE_KEY='sb_publishable_D2eL1fMCCB9Y1jPu1h-jqg_yupHB67v';const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let state={currentUserId:localStorage.getItem('zetsu_user')||null,users:[],offices:[],attendance:[],spp:[],schedules:[],announcements:[],notes:[],points:[],userPos:null,calculatedDistance:null,map:null,userMarker:null,currentStatus:'Hadir',selectedOffice:null,selectedSchedule:null,locationIntegrity:{checked:false,blocked:false,reason:'',mockDetected:false,developerModeDetected:false,lastTimestamp:0,lastLat:null,lastLng:null}};
+let state={currentUserId:null,currentAuthUserId:null,users:[],offices:[],attendance:[],spp:[],schedules:[],announcements:[],notes:[],points:[],userPos:null,calculatedDistance:null,map:null,userMarker:null,currentStatus:'Hadir',selectedOffice:null,selectedSchedule:null,locationIntegrity:{checked:false,blocked:false,reason:'',mockDetected:false,developerModeDetected:false,lastTimestamp:0,lastLat:null,lastLng:null}};
 function calculateDistance(a,b,c,d){const R=6371e3,p1=a*Math.PI/180,p2=c*Math.PI/180,dp=(c-a)*Math.PI/180,dl=(d-b)*Math.PI/180,x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return Math.round(R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)))}
 
 /* =========================
@@ -330,9 +330,65 @@ async function loadInitialData(){initTheme();state._dataLoading=true;state._data
  for(const result of results){if(result.status==='fulfilled'){const [key,data]=result.value;state[key]=data}else{const key=Object.keys(jobs)[results.indexOf(result)];state._dataLoadErrors.push(key);console.error('loadInitialData '+key+':',result.reason)}}
  state._dataLoading=false;$('appLoadingScreen').style.display='none';renderApp();
  if(state._dataLoadErrors.length&&state.currentUserId&&typeof Swal!=='undefined'){Swal.fire({icon:'warning',title:'Sebagian data belum termuat',text:'Koneksi Supabase bermasalah pada: '+state._dataLoadErrors.join(', ')+'. Data yang sudah ada di layar tidak dihapus.',confirmButtonText:'Mengerti'});}}
-async function handleLogin(e){e.preventDefault();const u=$('inputUsername').value.trim(),p=$('inputPassword').value.trim(),btn=$('loginBtn');if(!u||!p)return;btn.disabled=true;btn.textContent='⏳ Memeriksa...';try{let r=await supabaseClient.from('users').select('*').ilike('id',u).limit(1).maybeSingle();if(r.error)throw r.error;const found=r.data;if(!found){Swal.fire('Gagal Masuk','ID pemain/admin tidak ditemukan','error');return}if(String(found.pin)!==p){Swal.fire('Gagal Masuk','PIN salah','error');return}const user={...found,officeId:found.office_id,sppStatus:found.spp_status||'Belum Lunas'};const idx=state.users.findIndex(x=>String(x.id).toLowerCase()===String(user.id).toLowerCase());if(idx>=0)state.users[idx]=user;else state.users.push(user);state.currentUserId=user.id;localStorage.setItem('zetsu_user',user.id);Swal.fire({icon:'success',title:'Berhasil Masuk!',text:`Selamat datang, ${user.name}`,timer:1200,showConfirmButton:false});renderApp()}catch(e){console.error('Login Supabase:',e);Swal.fire('Koneksi Supabase Gagal',e.message||'Tidak dapat mengakses tabel users','error')}finally{btn.disabled=false;btn.textContent='🔑 Masuk Sistem'}}
-function handleLogout(){localStorage.removeItem('zetsu_user');state.currentUserId=null;renderApp()}
-function renderApp(){if(!state.currentUserId){$('loginScreen').style.display='flex';$('mainApp').style.display='none';$('adminBottomNav').style.display='none';return}const u=state.users.find(x=>String(x.id)===String(state.currentUserId))||{id:state.currentUserId,name:state.currentUserId,role:'Pemain'};$('loginScreen').style.display='none';$('mainApp').style.display='block';$('displayName').textContent=u.name;$('avatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('displayRoleBadge').innerHTML=`<span class="badge">${esc(u.role||'Pemain')}</span>`;const admin=String(u.id)==='admin'||String(u.role||'').includes('Pelatih');$('adminArea').style.display=admin?'block':'none';$('employeeArea').style.display=admin?'none':'block';$('adminBottomNav').style.display=admin?'flex':'none';$('mainApp').classList.toggle('is-admin',admin);if(admin){$('sidebarAvatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('sidebarName').textContent=u.name||'Administrator';renderAdminTables();const savedTab=localStorage.getItem('zetsu_admin_tab');const validTabs=['dashboard','users','schedules','spp','attendance','offices','academy'];switchAdminTab(validTabs.includes(savedTab)?savedTab:'dashboard')}else renderEmployeeDashboard(u)}
+function setCurrentUser(user,authUserId=null){const normalized={...user,officeId:user.office_id,sppStatus:user.spp_status||'Belum Lunas'};const idx=state.users.findIndex(x=>String(x.id).toLowerCase()===String(normalized.id).toLowerCase());if(idx>=0)state.users[idx]=normalized;else state.users.push(normalized);state.currentUserId=normalized.id;state.currentAuthUserId=authUserId||normalized.auth_user_id||null;return normalized}
+async function restoreAuthSession(){try{const sr=await supabaseClient.auth.getSession();const session=sr?.data?.session;if(!session?.user?.id){state.currentUserId=null;state.currentAuthUserId=null;return null}const r=await supabaseClient.from('users').select('*').eq('auth_user_id',session.user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){await supabaseClient.auth.signOut();state.currentUserId=null;state.currentAuthUserId=null;return null}return setCurrentUser(r.data,session.user.id)}catch(e){console.error('Restore Auth session:',e);state.currentUserId=null;state.currentAuthUserId=null;return null}}
+async function handleLogin(e){
+ e.preventDefault();
+ const login=$('inputUsername').value.trim(),p=$('inputPassword').value.trim(),btn=$('loginBtn');
+ if(!login||!p)return;
+ btn.disabled=true;btn.textContent='⏳ Memeriksa...';
+ try{
+  /* P1: akun Auth yang sudah dimigrasikan tidak perlu dicari berdasarkan PIN di tabel users.
+     Admin sementara memakai email Auth yang sudah dibuat di Supabase. */
+  if(String(login).toLowerCase()==='admin'){
+   const ar=await supabaseClient.auth.signInWithPassword({email:'admin@zetsu.com',password:p});
+   if(ar.error)throw ar.error;
+   const authId=ar.data?.user?.id;
+   if(!authId)throw new Error('Session Auth tidak terbentuk.');
+   const pr=await supabaseClient.from('users').select('*').eq('auth_user_id',authId).maybeSingle();
+   if(pr.error)throw pr.error;
+   if(!pr.data){await supabaseClient.auth.signOut();throw new Error('Akun Auth belum terhubung ke profil ZETSU.');}
+   const user=setCurrentUser(pr.data,authId);
+   Swal.fire({icon:'success',title:'Berhasil Masuk!',text:`Selamat datang, ${user.name}`,timer:1200,showConfirmButton:false});
+   renderApp();
+   return;
+  }
+
+  /* Pemain yang sudah dimigrasikan: bila user memasukkan email, Auth dapat langsung dipakai.
+     Pemetaan ID pemain -> email akan kita selesaikan pada tahap migrasi akun pemain. */
+  if(login.includes('@')){
+   const ar=await supabaseClient.auth.signInWithPassword({email:login,password:p});
+   if(ar.error)throw ar.error;
+   const authId=ar.data?.user?.id;
+   const pr=authId?await supabaseClient.from('users').select('*').eq('auth_user_id',authId).maybeSingle():null;
+   if(pr?.error)throw pr.error;
+   if(!pr?.data){await supabaseClient.auth.signOut();throw new Error('Email Auth belum terhubung ke profil ZETSU.');}
+   const user=setCurrentUser(pr.data,authId);
+   Swal.fire({icon:'success',title:'Berhasil Masuk!',text:`Selamat datang, ${user.name}`,timer:1200,showConfirmButton:false});
+   renderApp();
+   return;
+  }
+
+  /* MODE MIGRASI sementara untuk pemain lama yang belum punya akun Auth. */
+  const r=await supabaseClient.from('users').select('*').ilike('id',login).limit(1).maybeSingle();
+  if(r.error)throw r.error;
+  const found=r.data;
+  if(!found){Swal.fire('Gagal Masuk','ID pemain/admin tidak ditemukan','error');return}
+  if(found.auth_user_id){
+   throw new Error('Akun ini sudah dimigrasikan ke Supabase Auth. Gunakan email Auth untuk masuk.');
+  }
+  if(String(found.pin)!==p){Swal.fire('Gagal Masuk','PIN salah','error');return}
+  const user=setCurrentUser(found,null);
+  Swal.fire({icon:'success',title:'Berhasil Masuk!',text:`Selamat datang, ${user.name}`,timer:1200,showConfirmButton:false});
+  renderApp();
+ }catch(e){
+  console.error('Login Supabase:',e);
+  Swal.fire('Gagal Masuk',e.message||'Autentikasi gagal.','error');
+ }finally{btn.disabled=false;btn.textContent='🔑 Masuk Sistem'}
+}
+async function handleLogout(){try{if(state.currentAuthUserId)await supabaseClient.auth.signOut()}catch(e){console.warn('Sign out:',e)}state.currentUserId=null;state.currentAuthUserId=null;localStorage.removeItem('zetsu_user');renderApp()}
+
+function renderApp(){if(!state.currentUserId){$('loginScreen').style.display='flex';$('mainApp').style.display='none';$('adminBottomNav').style.display='none';return}const u=state.users.find(x=>String(x.id)===String(state.currentUserId))||{id:state.currentUserId,name:state.currentUserId,role:'Pemain'};$('loginScreen').style.display='none';$('mainApp').style.display='block';$('displayName').textContent=u.name;$('avatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('displayRoleBadge').innerHTML=`<span class="badge">${esc(u.role||'Pemain')}</span>`;const admin=String(u.role||'').toLowerCase().includes('pelatih')||String(u.role||'').toLowerCase().includes('admin');$('adminArea').style.display=admin?'block':'none';$('employeeArea').style.display=admin?'none':'block';$('adminBottomNav').style.display=admin?'flex':'none';$('mainApp').classList.toggle('is-admin',admin);if(admin){$('sidebarAvatar').textContent=(u.name||'ZS').slice(0,2).toUpperCase();$('sidebarName').textContent=u.name||'Administrator';renderAdminTables();const savedTab=localStorage.getItem('zetsu_admin_tab');const validTabs=['dashboard','users','schedules','spp','attendance','offices','academy'];switchAdminTab(validTabs.includes(savedTab)?savedTab:'dashboard')}else renderEmployeeDashboard(u)}
 function monthName(m){return ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][m]}
 function currentSpp(user){const n=new Date();return state.spp.find(s=>String(s.user_id??s.userId)===String(user.id)&&Number(s.year)===n.getFullYear()&&String(s.month)===monthName(n.getMonth()))||null}
 function calcStreak(userId){const days=[...new Set(state.attendance.filter(a=>String(a.user_id??a.userId)===String(userId)&&['Hadir','Terlambat'].includes(a.status)).map(a=>String(a.date||'').slice(0,10)).filter(Boolean))].sort().reverse();let streak=0,d=new Date();for(const x of days){const ds=todayFromDate(d);if(x===ds){streak++;d.setDate(d.getDate()-1)}else if(streak===0){d.setDate(d.getDate()-1);if(x===todayFromDate(d)){streak++;d.setDate(d.getDate()-1)}else break}else break}return streak}
@@ -348,8 +404,26 @@ const q=($('userSearch')?.value||'').toLowerCase(),gf=$('userAgeGroupFilter')?.v
 const sf=$('sppFilterStatus')?.value||'',sy=$('sppFilterYear')?.value||'';$('sppTableBody').innerHTML=state.spp.filter(s=>(!sf||s.status===sf)&&(!sy||String(s.year)===sy)).map(s=>`<tr><td><b>${esc(s.user_name||s.userName||s.user_id)}</b><br><small>${esc(s.user_id||s.userId)}</small></td><td>${esc(s.month)} ${s.year}</td><td>${money(s.amount)}</td><td><span class="badge ${s.status==='Lunas'?'success':'danger'}">${esc(s.status)}</span></td><td>${s.paid_date||'-'}<br><small>${esc(s.method||'')}</small></td><td><button class="btn-warning" onclick="editSpp('${esc(s.id)}')">Edit</button> <button class="btn-danger" onclick="deleteSppRecord('${esc(s.id)}')">Hapus</button>${s.status==='Lunas'?` <button class="btn-go" style="margin-top:5px;font-size:10px;padding:7px 9px;" onclick="printSppReceipt('${esc(s.id)}')">🧾 PDF</button> <button class="btn-secondary" style="margin-top:5px;font-size:10px;padding:7px 9px;" onclick="sendSppWhatsApp('${esc(s.id)}')">📲 WA</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">Belum ada data SPP.</td></tr>';
 const ad=$('attFilterDate')?.value||'',as=$('attFilterStatus')?.value||'';$('attendanceTableBody').innerHTML=state.attendance.filter(a=>(!ad||a.date===ad)&&(!as||a.status===as)).map(a=>`<tr><td>${a.photo_url||a.photoUrl?`<img src="${esc(a.photo_url||a.photoUrl)}" class="img-thumb">`:'-'}</td><td><b>${esc(a.user_name||a.userName)}</b><br><small>${esc(a.user_id||a.userId)}</small></td><td>${esc(a.date||'')}<br>${esc(a.time||'')}</td><td>${esc(a.status)}</td><td>${a.distance||0}m</td><td><button class="btn-warning" onclick="editAttendance('${esc(a.id)}')">Edit</button> <button class="btn-danger" onclick="deleteAttendance('${esc(a.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Belum ada absensi.</td></tr>';$('officeTableBody').innerHTML=state.offices.map(o=>`<tr><td><b>${esc(o.name)}</b><br><small>${esc(o.address||'')}</small></td><td>${o.lat}, ${o.lng}</td><td>${o.radius}m</td><td><button class="btn-warning" onclick="editOffice('${esc(o.id)}')">Edit</button> <button class="btn-danger" onclick="deleteOffice('${esc(o.id)}')">Hapus</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Belum ada lapangan.</td></tr>';renderSchedules();renderAcademyLists();renderAdminDashboard()}
 function renderAdminDashboard(){if(!$('admTotalPlayers'))return;const ps=state.users.filter(u=>String(u.id)!=='admin'),d=today(),td=state.attendance.filter(a=>a.date===d);$('admTotalPlayers').textContent=ps.length;$('admTodayPresent').textContent=td.filter(a=>a.status==='Hadir').length;$('admTodayLate').textContent=td.filter(a=>a.status==='Terlambat').length;$('admUnpaid').textContent=ps.filter(u=>(u.spp_status||u.sppStatus)!=='Lunas').length;const days=[...Array(7)].map((_,i)=>{const x=new Date();x.setDate(x.getDate()-6+i);const ds=x.toISOString().slice(0,10);return{ds,n:state.attendance.filter(a=>a.date===ds&&['Hadir','Terlambat'].includes(a.status)).length}});const max=Math.max(1,...days.map(x=>x.n));$('attendanceChart').innerHTML=days.map(x=>`<div class="bar-row"><span>${x.ds.slice(5)}</span><div class="bar"><span style="width:${x.n/max*100}%"></span></div><b>${x.n}</b></div>`).join('');$('adminRanking').innerHTML=ps.map(u=>({u,p:userPoints(u.id)})).sort((a,b)=>b.p-a.p).slice(0,5).map((x,i)=>`<div class="rank-row"><div class="rank-num">${i+1}</div><div style="flex:1"><b>${esc(x.u.name)}</b><small style="display:block;color:var(--text-muted)">${esc(x.u.role||'Pemain')}</small></div><strong>${x.p} pts</strong></div>`).join('')||'<div class="empty">Belum ada poin.</div>'}
-async function dbSave(table,payload,id){try{const q=id?supabaseClient.from(table).update(payload).eq('id',id).select():supabaseClient.from(table).insert([payload]).select();const r=await q;return r}catch(e){return {error:e}}}
-async function _handleSaveUser(e){e.preventDefault();const editId=$('editUserId').value,id=$('newUserId').value.trim(),birthYear=Number($('newUserBirthYear').value);if(!Number.isFinite(birthYear)||birthYear<=0){Swal.fire('Tahun Lahir Tidak Valid','Masukkan tahun lahir yang benar.','warning');return}const existing=editId?state.users.find(u=>String(u.id)===String(editId)):null;const payload={name:$('newUserName').value.trim(),role:$('newUserRole').value,office_id:existing?.office_id??existing?.officeId??null,pin:$('newUserPassword').value,phone:$('newUserPhone').value.trim(),birth_year:birthYear};const r=editId?await dbSave('users',payload,editId):await dbSave('users',{id,...payload,spp_status:'Belum Lunas'});if(!r.error){await reload();resetUserForm();Swal.fire('Sukses','Data pemain tersimpan • Kelompok '+ageGroupLabel(birthYear),'success')}else Swal.fire('Gagal',r.error.message,'error')}
+async function dbSave(table,payload,id){
+  try{
+    if(!table||!payload)return {error:new Error('Data simpan tidak valid.')};
+    if(id){
+      if(String(id).trim()==='')return {error:new Error('ID data tidak valid.')};
+      const q=supabaseClient.from(table).update(payload).eq('id',id).select();
+      const r=await q;
+      if(!r.error&&Array.isArray(r.data)&&r.data.length===0)return {error:new Error('Data yang akan diperbarui tidak ditemukan.')};
+      return r;
+    }
+    return await supabaseClient.from(table).insert([payload]).select();
+  }catch(e){return {error:e}}
+}
+async function _handleSaveUser(e){e.preventDefault();const editId=$('editUserId').value,id=$('newUserId').value.trim(),birthYear=Number($('newUserBirthYear').value);if(!Number.isFinite(birthYear)||birthYear<=0){Swal.fire('Tahun Lahir Tidak Valid','Masukkan tahun lahir yang benar.','warning');return}const existing=editId?state.users.find(u=>String(u.id)===String(editId)):null;const payload={name:$('newUserName').value.trim(),role:$('newUserRole').value,office_id:existing?.office_id??existing?.officeId??null,pin:$('newUserPassword').value,phone:$('newUserPhone').value.trim(),birth_year:birthYear};
+  if(!editId){
+    if(!id)return Swal.fire('ID belum diisi','Masukkan ID pemain.','warning');
+    const exists=state.users.some(x=>String(x.id).trim().toLowerCase()===id.toLowerCase());
+    if(exists)return Swal.fire('ID Sudah Dipakai','Gunakan ID pemain yang berbeda.','warning');
+  }
+  const r=editId?await dbSave('users',payload,editId):await dbSave('users',{id,...payload,spp_status:'Belum Lunas'});if(!r.error){await reload();resetUserForm();Swal.fire('Sukses','Data pemain tersimpan • Kelompok '+ageGroupLabel(birthYear),'success')}else Swal.fire('Gagal',r.error.message,'error')}
 function editUser(id){const i=state.users.findIndex(u=>String(u.id)===String(id)),u=state.users[i];if(!u)return;$('editUserId').value=u.id;$('newUserId').value=u.id;$('newUserId').disabled=true;$('newUserName').value=u.name||'';$('newUserRole').value=u.role||'Flank';$('newUserPhone').value=u.phone||'';$('newUserBirthYear').value=u.birth_year??u.birthYear??'';updateAgeGroupPreview();$('newUserPassword').value=u.pin||'';$('userFormTitle').textContent='✏️ Edit Pemain';$('btnSaveUser').textContent='💾 Perbarui';$('btnCancelUser').style.display='block'}
 function resetUserForm(){$('editUserId').value='';$('addUserForm').reset();$('newUserId').disabled=false;$('newUserAgeGroup').value='-';$('userFormTitle').textContent='➕ Tambah Pemain';$('btnSaveUser').textContent='💾 Simpan Pemain';$('btnCancelUser').style.display='none'}
 document.addEventListener('input',e=>{if(e.target?.id==='newUserBirthYear')updateAgeGroupPreview()});
@@ -660,7 +734,25 @@ function sendSppReminderWhatsApp(userId,month,year,amount){
 
 function resetSppForm(){document.querySelector('#tabSpp form').reset();$('editSppId').value='';$('btnCancelSpp').style.display='none'}
 async function deleteSppRecord(id){if(!(await Swal.fire({title:'Hapus transaksi SPP?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya, hapus',cancelButtonText:'Batal'})).isConfirmed)return;const r=await supabaseClient.from('spp').delete().eq('id',id);if(r.error)return Swal.fire('Gagal Menghapus',r.error.message||'Transaksi SPP gagal dihapus.','error');await reload();Swal.fire({icon:'success',title:'Terhapus',text:'Transaksi SPP berhasil dihapus.',timer:1200,showConfirmButton:false})}
-async function _handleSaveAttendance(e){e.preventDefault();const id=$('editAttId').value,u=state.users.find(x=>String(x.id)===String($('attUserId').value)),p={user_id:u.id,user_name:u.name,date:$('attDate').value,time:$('attTime').value,status:$('attStatus').value};const r=await dbSave('attendance',p,id);if(!r.error){reload();resetAttendanceForm();Swal.fire('Sukses','Absensi tersimpan','success')}else Swal.fire('Gagal',r.error.message,'error')}
+async function _handleSaveAttendance(e){
+  e.preventDefault();
+  const id=$('editAttId').value.trim();
+  const u=state.users.find(x=>String(x.id)===String($('attUserId').value));
+  const date=$('attDate').value.trim();
+  const time=$('attTime').value.trim();
+  const status=$('attStatus').value;
+  if(!u)return Swal.fire('Pilih pemain','Pemain absensi tidak ditemukan.','warning');
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return Swal.fire('Tanggal tidak valid','Pilih tanggal absensi yang benar.','warning');
+  if(!time)return Swal.fire('Jam belum diisi','Masukkan jam absensi.','warning');
+  const p={user_id:u.id,user_name:u.name,date,time,status};
+  const duplicate=supabaseClient.from('attendance').select('id').eq('user_id',u.id).eq('date',date);
+  const dr=id?await duplicate.neq('id',id):await duplicate;
+  if(dr.error)throw dr.error;
+  if(dr.data?.length)return Swal.fire('Absensi Sudah Ada','Pemain tersebut sudah memiliki absensi pada tanggal itu. Gunakan Edit pada data yang sudah ada.','warning');
+  const r=await dbSave('attendance',p,id);
+  if(!r.error){await reload();resetAttendanceForm();Swal.fire('Sukses','Absensi tersimpan','success')}
+  else Swal.fire('Gagal',r.error.message,'error')
+}
 function editAttendance(id){const a=state.attendance.find(x=>String(x.id)===String(id));$('editAttId').value=a.id;$('attUserId').value=a.user_id??a.userId;$('attDate').value=a.date||today();$('attTime').value=a.time||'';$('attStatus').value=a.status;$('btnCancelAtt').style.display='block'}
 function resetAttendanceForm(){document.querySelector('#tabAttendance form').reset();$('editAttId').value='';$('btnCancelAtt').style.display='none'}
 async function deleteAttendance(id){if(!(await Swal.fire({title:'Hapus absensi?',icon:'warning',showCancelButton:true,confirmButtonText:'Ya, hapus',cancelButtonText:'Batal'})).isConfirmed)return;const r=await supabaseClient.from('attendance').delete().eq('id',id);if(r.error)return Swal.fire('Gagal Menghapus',r.error.message||'Absensi gagal dihapus.','error');await reload();Swal.fire({icon:'success',title:'Terhapus',text:'Absensi berhasil dihapus.',timer:1200,showConfirmButton:false})}
@@ -765,7 +857,16 @@ function getAttendanceScheduleContext(user,date,now=new Date()){
 async function proceedToReview(){const u=state.users.find(x=>String(x.id)===String(state.currentUserId)),v=$('cameraPreview'),img=$('capturedPhoto'),n=new Date();const scheduleCtx=getAttendanceScheduleContext(u,today(),n);state.currentStatus=scheduleCtx.status;state.selectedSchedule=scheduleCtx.schedule||null;let sourceData='';if(state.cameraImageData)sourceData=state.cameraImageData;else if(v?.srcObject){const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||480;c.getContext('2d').drawImage(v,0,0,c.width,c.height);sourceData=c.toDataURL('image/jpeg',0.9)}else{Swal.fire('Kamera belum siap','Ambil foto terlebih dahulu.','warning');return}try{$('btnProceedReview').disabled=true;$('btnProceedReview').textContent='⏳ Mengompres foto...';const originalBlob=await (await fetch(sourceData)).blob();state.photoOriginalBytes=originalBlob.size;const compressed=await compressPhotoDataUrl(sourceData,1280,1280,0.72);state.photoCompressedBlob=compressed.blob;state.photoCompressedBytes=compressed.blob.size;img.src=compressed.dataUrl;img.style.display='block';const kb=n=>Math.max(1,Math.round(n/1024));const info=$('photoCompressionInfo');if(info)info.textContent=`📦 ${kb(state.photoOriginalBytes)} KB → ${kb(state.photoCompressedBytes)} KB • ${compressed.width}×${compressed.height}px • JPEG`;}catch(e){Swal.fire('Gagal memproses foto',e.message||'Kompresi foto gagal','error');return}finally{$('btnProceedReview').disabled=false;$('btnProceedReview').textContent='📸 Ambil Foto & Tinjau Absen'}$('reviewOfficeName').textContent=state.selectedOffice?.name||'-';$('reviewDistance').textContent=(state.calculatedDistance||0)+' Meter';$('reviewTime').textContent=n.toLocaleTimeString('id-ID');$('reviewStatusBadge').textContent=state.currentStatus;$('reviewStatusBadge').className='badge '+(state.currentStatus==='Hadir'?'success':'pending');$('stepCapture').style.display='none';$('stepReview').style.display='block';$('modalTitle').textContent='Tinjau Presensi Anda'}
 function backToCapture(){$('stepCapture').style.display='block';$('stepReview').style.display='none';$('modalTitle').textContent='Absen Presensi Latihan'}
 async function getFreshLocation(){return await new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('GPS tidak tersedia di perangkat ini.'));navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:15000,maximumAge:0})})}
-async function submitAttendance(){if(state._attendanceSubmitting)return;state._attendanceSubmitting=true;$('btnSubmitFinal').disabled=true;$('btnSubmitFinal').textContent='⏳ Memverifikasi lokasi...';let uploadedFile=null;try{const integrity=await checkLocationIntegrity();if(integrity.blocked)throw new Error(integrity.reason||'Pemeriksaan integritas lokasi gagal.');const pos=await getFreshLocation();const loc=await validateLocationReading(pos);if(loc.blocked)throw new Error(loc.reason||'Data GPS tidak valid.');state.userPos={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,timestamp:pos.timestamp};const validNow=findValidOffice(state.userPos.lat,state.userPos.lng);if(!validNow)throw new Error('Anda harus berada di dalam radius salah satu lapangan yang terdaftar.');state.selectedOffice=validNow;state.calculatedDistance=validNow._distance;const u=state.users.find(x=>String(x.id)===String(state.currentUserId));if(!u)throw new Error('Data pengguna tidak ditemukan. Silakan login ulang.');const date=today();const dup=await supabaseClient.from('attendance').select('id').eq('user_id',u.id).eq('date',date).limit(1);if(dup.error)throw dup.error;if(dup.data?.length)throw new Error('Anda sudah melakukan absensi hari ini.');$('btnSubmitFinal').textContent='⏳ Menyimpan...';let photoUrl=null;if(state.photoCompressedBlob){const name=`att_${u.id}_${Date.now()}.jpg`;const up=await supabaseClient.storage.from('attendance-photos').upload(name,state.photoCompressedBlob,{contentType:'image/jpeg',cacheControl:'3600',upsert:false});if(up.error)throw up.error;uploadedFile=name;photoUrl=supabaseClient.storage.from('attendance-photos').getPublicUrl(name).data.publicUrl}const n=new Date();const scheduleCtx=getAttendanceScheduleContext(u,date,n);state.currentStatus=scheduleCtx.status;state.selectedSchedule=scheduleCtx.schedule||null;const p={user_id:u.id,user_name:u.name,date,time:n.toLocaleTimeString('id-ID'),status:state.currentStatus,distance:state.calculatedDistance||0,latitude:state.userPos.lat,longitude:state.userPos.lng,accuracy:state.userPos.accuracy||null,office_id:state.selectedOffice.id,photo_url:photoUrl,schedule_id:scheduleCtx.schedule?.id??null};const r=await supabaseClient.from('attendance').insert([p]);if(r.error)throw r.error;uploadedFile=null;closeAttendanceModal();await reload();Swal.fire('Berhasil Absen!',`Status: ${p.status}`,'success')}catch(e){console.error('submitAttendance:',e);if(uploadedFile)await supabaseClient.storage.from('attendance-photos').remove([uploadedFile]).catch(()=>{});Swal.fire('Gagal',e?.message||'Tidak dapat menyimpan','error')}finally{state._attendanceSubmitting=false;$('btnSubmitFinal').disabled=false;$('btnSubmitFinal').textContent='🚀 Kirim Absen'}}
+async function submitAttendance(){if(state._attendanceSubmitting)return;state._attendanceSubmitting=true;$('btnSubmitFinal').disabled=true;$('btnSubmitFinal').textContent='⏳ Memverifikasi lokasi...';let uploadedFile=null;try{const integrity=await checkLocationIntegrity();if(integrity.blocked)throw new Error(integrity.reason||'Pemeriksaan integritas lokasi gagal.');const pos=await getFreshLocation();const loc=await validateLocationReading(pos);if(loc.blocked)throw new Error(loc.reason||'Data GPS tidak valid.');state.userPos={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,timestamp:pos.timestamp};const validNow=findValidOffice(state.userPos.lat,state.userPos.lng);if(!validNow)throw new Error('Anda harus berada di dalam radius salah satu lapangan yang terdaftar.');state.selectedOffice=validNow;state.calculatedDistance=validNow._distance;const u=state.users.find(x=>String(x.id)===String(state.currentUserId));if(!u)throw new Error('Data pengguna tidak ditemukan. Silakan login ulang.');const date=today();const dup=await supabaseClient.from('attendance').select('id').eq('user_id',u.id).eq('date',date).limit(1);if(dup.error)throw dup.error;if(dup.data?.length)throw new Error('Anda sudah melakukan absensi hari ini.');$('btnSubmitFinal').textContent='⏳ Menyimpan...';let photoUrl=null;if(state.photoCompressedBlob){const name=`att_${u.id}_${Date.now()}.jpg`;const up=await supabaseClient.storage.from('attendance-photos').upload(name,state.photoCompressedBlob,{contentType:'image/jpeg',cacheControl:'3600',upsert:false});if(up.error)throw up.error;uploadedFile=name;photoUrl=supabaseClient.storage.from('attendance-photos').getPublicUrl(name).data.publicUrl}const n=new Date();const scheduleCtx=getAttendanceScheduleContext(u,date,n);state.currentStatus=scheduleCtx.status;state.selectedSchedule=scheduleCtx.schedule||null;const p={user_id:u.id,user_name:u.name,date,time:n.toLocaleTimeString('id-ID'),status:state.currentStatus,distance:state.calculatedDistance||0,latitude:state.userPos.lat,longitude:state.userPos.lng,accuracy:state.userPos.accuracy||null,office_id:state.selectedOffice.id,photo_url:photoUrl,schedule_id:scheduleCtx.schedule?.id??null};const r=await supabaseClient.from('attendance').insert([p]);
+  if(r.error){
+    const msg=String(r.error.message||'');
+    const code=String(r.error.code||'');
+    if(code==='23505'||/duplicate key|unique constraint/i.test(msg)){
+      throw new Error('Anda sudah memiliki absensi untuk tanggal tersebut.');
+    }
+    throw r.error;
+  }
+  uploadedFile=null;closeAttendanceModal();await reload();Swal.fire('Berhasil Absen!',`Status: ${p.status}`,'success')}catch(e){console.error('submitAttendance:',e);if(uploadedFile)await supabaseClient.storage.from('attendance-photos').remove([uploadedFile]).catch(()=>{});Swal.fire('Gagal',e?.message||'Tidak dapat menyimpan','error')}finally{state._attendanceSubmitting=false;$('btnSubmitFinal').disabled=false;$('btnSubmitFinal').textContent='🚀 Kirim Absen'}}
 
 /* =========================
    EXPORT DATA ADMIN
@@ -884,7 +985,7 @@ function handleSaveAnnouncement(e){return runAdminSaveLocked(e,_handleSaveAnnoun
 function handleSaveCoachNote(e){return runAdminSaveLocked(e,_handleSaveCoachNote)}
 function handleSavePoint(e){return runAdminSaveLocked(e,_handleSavePoint)}
 
-window.addEventListener('DOMContentLoaded',()=>{if($('sppMonth'))$('sppMonth').innerHTML=Array.from({length:12},(_,i)=>`<option>${monthName(i)}</option>`).join('');if($('sppPaidDate'))$('sppPaidDate').value=today();if($('sppDueDate'))$('sppDueDate').value=today();if($('attDate'))$('attDate').value=today();if($('announcementDate'))$('announcementDate').value=today();loadInitialData()});
+window.addEventListener('DOMContentLoaded',async()=>{if($('sppMonth'))$('sppMonth').innerHTML=Array.from({length:12},(_,i)=>`<option>${monthName(i)}</option>`).join('');if($('sppPaidDate'))$('sppPaidDate').value=today();if($('sppDueDate'))$('sppDueDate').value=today();if($('attDate'))$('attDate').value=today();if($('announcementDate'))$('announcementDate').value=today();await restoreAuthSession();loadInitialData()});
 </script>
 </body>
 </html>
