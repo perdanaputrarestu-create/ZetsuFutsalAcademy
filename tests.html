@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZETSU Unit Tests</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0F172A; color: #F8FAFC; padding: 24px; max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 18px; }
+    .ok { color: #10B981; }
+    .fail { color: #EF4444; }
+    li { margin: 6px 0; font-size: 13px; }
+    .summary { margin-top: 16px; padding: 12px; background: #1E293B; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <h1>ZETSU FUTSAL ACADEMY — Unit Tests</h1>
+  <p style="color:#94A3B8;font-size:13px;">Pengujian pure helpers (distance, age group, SPP, streak, pagination).</p>
+  <ul id="list"></ul>
+  <div class="summary" id="summary">Menjalankan...</div>
+  <script src="js/utils.js"></script>
+  <script src="js/tests.js"></script>
+  <script>
+    const r = window.ZetsuTestResult || { passed: 0, failed: 0, logs: [] };
+    const list = document.getElementById('list');
+    (r.logs || []).forEach(l => {
+      const li = document.createElement('li');
+      li.className = l.ok ? 'ok' : 'fail';
+      li.textContent = (l.ok ? '✓ ' : '✗ ') + l.name + (l.detail ? ' — ' + l.detail : '');
+      list.appendChild(li);
+    });
+    document.getElementById('summary').innerHTML =
+      `<b class="${r.failed ? 'fail' : 'ok'}">${r.passed} passed · ${r.failed} failed</b> dari ${r.total || 0} tes`;
+  </script>
+</body>
+</html>
